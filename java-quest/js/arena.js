@@ -1,0 +1,155 @@
+/* ============================================================
+   JAVA QUEST — Practice Arena: standalone coding challenges
+   Same evaluation engine as lesson challenges (see app.js).
+   ============================================================ */
+const ARENA = [
+  {
+    id: "ar1", title: "Hello, Method", diff: "easy",
+    desc: "Write a method that returns a personalized greeting. Warm up your method syntax.",
+    starter: "public class Greeter {\n    public String greet(String name) {\n        // return \"Hello, \" + name + \"!\"\n        return \"\";\n    }\n}",
+    checks: [
+      { re: "public\\s+String\\s+greet\\s*\\(\\s*String\\s+\\w+\\s*\\)", msg: "Method greet(String name) exists" },
+      { re: "return\\s+.*Hello", msg: "Returns a string containing \"Hello\"", flags: "i" },
+    ],
+    hints: ["return \"Hello, \" + name + \"!\";", "String concatenation with + joins the pieces."],
+    solution: "public String greet(String name) {\n    return \"Hello, \" + name + \"!\";\n}",
+  },
+  {
+    id: "ar2", title: "Even or Odd", diff: "easy",
+    desc: "Classify a number. The modulus operator % is your friend.",
+    starter: "public class Classifier {\n    public String evenOdd(int n) {\n        // return \"even\" or \"odd\"\n        return \"\";\n    }\n}",
+    checks: [
+      { re: "public\\s+String\\s+evenOdd\\s*\\(\\s*int", msg: "Method evenOdd(int n) exists" },
+      { re: "%\\s*2", msg: "Uses % 2 to test evenness" },
+      { re: "return\\s+\"even\"", msg: "Returns \"even\" for even numbers" },
+      { re: "return\\s+\"odd\"", msg: "Returns \"odd\" for odd numbers" },
+    ],
+    hints: ["n % 2 == 0 means even."],
+    solution: "public String evenOdd(int n) {\n    return n % 2 == 0 ? \"even\" : \"odd\";\n}",
+  },
+  {
+    id: "ar3", title: "Factorial (Loop Edition)", diff: "easy",
+    desc: "Compute n! = 1×2×…×n with a loop. factorial(5) → 120.",
+    starter: "public class MathKit {\n    public long factorial(int n) {\n        long result = 1;\n        // your loop here\n        return result;\n    }\n}",
+    checks: [
+      { re: "public\\s+long\\s+factorial\\s*\\(\\s*int", msg: "Method factorial(int n) returns long" },
+      { re: "(for|while)\\s*\\(", msg: "Uses a loop" },
+      { re: "\\*\\s*=|result\\s*\\*=", msg: "Multiplies into the result", flags: "i" },
+    ],
+    hints: ["for (int i = 2; i <= n; i++) result *= i;", "Start result at 1 (multiplication identity)."],
+    solution: "public long factorial(int n) {\n    long result = 1;\n    for (int i = 2; i <= n; i++) {\n        result *= i;\n    }\n    return result;\n}",
+  },
+  {
+    id: "ar4", title: "Array Sum & Average", diff: "easy",
+    desc: "Sum an int array and return the average as a double. Mind integer division!",
+    starter: "public class Stats {\n    public double average(int[] nums) {\n        // your code here\n        return 0;\n    }\n}",
+    checks: [
+      { re: "public\\s+double\\s+average\\s*\\(\\s*int\\[\\]", msg: "Method average(int[] nums) exists" },
+      { re: "(for|while)\\s*\\(", msg: "Loops over the array" },
+      { re: "nums\\.length", msg: "Uses nums.length for the count" },
+      { re: "(double|1\\.0|\\(double\\))", msg: "Produces a decimal result (cast or double division)", flags: "i" },
+    ],
+    hints: ["(double) sum / nums.length avoids integer division.", "Empty array? You may assume length ≥ 1 for this kata."],
+    solution: "public double average(int[] nums) {\n    int sum = 0;\n    for (int n : nums) sum += n;\n    return (double) sum / nums.length;\n}",
+  },
+  {
+    id: "ar5", title: "Reverse a String (No StringBuilder tricks!)", diff: "medium",
+    desc: "Build the reverse of a string char by char with a loop. Classic interview warm-up.",
+    starter: "public class Reverser {\n    public String reverse(String s) {\n        String out = \"\";\n        // your loop here\n        return out;\n    }\n}",
+    checks: [
+      { re: "public\\s+String\\s+reverse\\s*\\(\\s*String", msg: "Method reverse(String s) exists" },
+      { re: "(for|while)\\s*\\(", msg: "Uses a loop" },
+      { re: "charAt", msg: "Reads characters with charAt" },
+    ],
+    hints: ["Walk from the last index (s.length() - 1) down to 0.", "out = s.charAt(i) + out; builds the reversed string."],
+    solution: "public String reverse(String s) {\n    String out = \"\";\n    for (int i = s.length() - 1; i >= 0; i--) {\n        out += s.charAt(i);\n    }\n    return out;\n}",
+  },
+  {
+    id: "ar6", title: "The Immutable Counter", diff: "medium",
+    desc: "Build an immutable counter class (final class, final field, no setters) whose withIncrement() returns a NEW counter — the immutability pattern from the vault lesson.",
+    starter: "public final class Counter {\n    private final int value;\n\n    public Counter(int value) {\n        this.value = value;\n    }\n\n    public int getValue() {\n        return value;\n    }\n\n    // return a NEW counter with value + 1 — never mutate!\n    public Counter withIncrement() {\n        return null;\n    }\n}",
+    checks: [
+      { re: "public\\s+final\\s+class\\s+Counter", msg: "Class is final (cannot be extended)" },
+      { re: "private\\s+final\\s+int", msg: "State is private final" },
+      { re: "return\\s+new\\s+Counter\\s*\\(", msg: "withIncrement returns a NEW Counter" },
+      { re: "(value\\s*\\+\\s*1|\\+\\s*1)", msg: "Increments by one" },
+    ],
+    hints: ["return new Counter(value + 1);", "If a method mutates this.value, the object is NOT immutable."],
+    solution: "public Counter withIncrement() {\n    return new Counter(value + 1);\n}",
+  },
+  {
+    id: "ar7", title: "Shape Polymorphism", diff: "medium",
+    desc: "Create an abstract class Shape with abstract area(), and a Circle subclass that implements it (area = π r²).",
+    starter: "abstract class Shape {\n    // declare abstract double area()\n}\n\nclass Circle extends Shape {\n    double r;\n    Circle(double r) { this.r = r; }\n\n    // override area()\n}",
+    checks: [
+      { re: "abstract\\s+class\\s+Shape", msg: "Shape is an abstract class" },
+      { re: "abstract\\s+double\\s+area", msg: "Shape declares abstract double area()" },
+      { re: "class\\s+Circle\\s+extends\\s+Shape", msg: "Circle extends Shape" },
+      { re: "(Math\\.PI|3\\.14)", msg: "Uses π for the area" },
+    ],
+    hints: ["abstract double area(); inside Shape.", "return Math.PI * r * r; in Circle."],
+    solution: "abstract class Shape {\n    abstract double area();\n}\n\nclass Circle extends Shape {\n    double r;\n    Circle(double r) { this.r = r; }\n    double area() { return Math.PI * r * r; }\n}",
+  },
+  {
+    id: "ar8", title: "Safe Division (Exceptions)", diff: "medium",
+    desc: "Write divide(a, b) that throws IllegalArgumentException when b == 0 — the guard-clause style.",
+    starter: "public class SafeMath {\n    public double divide(int a, int b) {\n        // guard against b == 0 by throwing IllegalArgumentException\n        return 0;\n    }\n}",
+    checks: [
+      { re: "public\\s+double\\s+divide\\s*\\(\\s*int\\s+\\w+\\s*,\\s*int", msg: "Method divide(int a, int b) exists" },
+      { re: "throw\\s+new\\s+IllegalArgumentException", msg: "Throws IllegalArgumentException on bad input" },
+      { re: "if\\s*\\(", msg: "Uses a guard clause" },
+    ],
+    hints: ["if (b == 0) throw new IllegalArgumentException(\"b cannot be zero\");", "Throw BEFORE doing the division."],
+    solution: "public double divide(int a, int b) {\n    if (b == 0) throw new IllegalArgumentException(\"b cannot be zero\");\n    return (double) a / b;\n}",
+  },
+  {
+    id: "ar9", title: "Word Frequency (Collections)", diff: "hard",
+    desc: "Count how many times each word appears in an array using a HashMap. Return the map.",
+    starter: "import java.util.*;\n\npublic class Counter {\n    public Map<String, Integer> countWords(String[] words) {\n        Map<String, Integer> counts = new HashMap<>();\n        // your code here\n        return counts;\n    }\n}",
+    checks: [
+      { re: "Map\\s*<\\s*String\\s*,\\s*Integer\\s*>", msg: "Returns Map<String, Integer>" },
+      { re: "(for|while)\\s*\\(", msg: "Loops over the words" },
+      { re: "(put\\s*\\(|merge\\s*\\(|getOrDefault)", msg: "Updates the map (put/merge/getOrDefault)" },
+      { re: "(getOrDefault|merge|containsKey|get\\s*\\()", msg: "Reads the current count before updating" },
+    ],
+    hints: ["counts.put(w, counts.getOrDefault(w, 0) + 1);", "Modern alternative: counts.merge(w, 1, Integer::sum);"],
+    solution: "public Map<String, Integer> countWords(String[] words) {\n    Map<String, Integer> counts = new HashMap<>();\n    for (String w : words) {\n        counts.merge(w, 1, Integer::sum);\n    }\n    return counts;\n}",
+  },
+  {
+    id: "ar10", title: "Thread-Safe Counter (Concurrency)", diff: "hard",
+    desc: "Finish a counter that is safe when hammered by many threads. Use synchronization — the race-condition fix.",
+    starter: "public class SafeCounter {\n    private int count = 0;\n\n    // make this method safe for concurrent calls\n    public void increment() {\n        count++;\n    }\n\n    public synchronized int get() {\n        return count;\n    }\n}",
+    checks: [
+      { re: "synchronized", msg: "Uses the synchronized keyword somewhere" },
+      { re: "(synchronized\\s+void\\s+increment|synchronized\\s*\\()|AtomicInteger", msg: "Protects the increment itself (synchronized method/block) or uses AtomicInteger" },
+      { re: "count\\s*\\+\\+|incrementAndGet", msg: "Increments the counter" },
+    ],
+    hints: ["public synchronized void increment() { count++; } — locks 'this' for the whole method.", "Alternative: replace count with AtomicInteger and call incrementAndGet()."],
+    solution: "public class SafeCounter {\n    private int count = 0;\n\n    public synchronized void increment() {\n        count++;\n    }\n\n    public synchronized int get() {\n        return count;\n    }\n}",
+  },
+  {
+    id: "ar11", title: "Stream Pipeline: Top Customers", diff: "hard",
+    desc: "Using streams, filter customers with spending > 1000 and collect their names into a List<String>.",
+    starter: "import java.util.*;\nimport java.util.stream.*;\n\nclass Customer {\n    String name;\n    double spending;\n    Customer(String name, double spending) { this.name = name; this.spending = spending; }\n}\n\npublic class Reports {\n    public List<String> topCustomers(List<Customer> customers) {\n        // customers.stream() ... collect(Collectors.toList())\n        return null;\n    }\n}",
+    checks: [
+      { re: "\\.stream\\s*\\(\\s*\\)", msg: "Calls .stream() on the list" },
+      { re: "filter\\s*\\(", msg: "Filters with filter(...)" },
+      { re: "map\\s*\\(", msg: "Maps to names with map(...)" },
+      { re: "collect\\s*\\(", msg: "Terminates with collect(...)" },
+    ],
+    hints: ["customers.stream().filter(c -> c.spending > 1000).map(c -> c.name).collect(Collectors.toList())", "The lambda parameter is your Customer — reach its fields directly."],
+    solution: "public List<String> topCustomers(List<Customer> customers) {\n    return customers.stream()\n        .filter(c -> c.spending > 1000)\n        .map(c -> c.name)\n        .collect(Collectors.toList());\n}",
+  },
+  {
+    id: "ar12", title: "Singleton the Right Way", diff: "hard",
+    desc: "Implement a thread-safe singleton with the bulletproof ENUM form — the pattern from the design lesson.",
+    starter: "public class AppConfig {\n    // 1) make AppConfig an enum with one constant INSTANCE\n    // 2) add a method connect() that prints \"connected\"\n}",
+    checks: [
+      { re: "enum\\s+AppConfig|public\\s+enum", msg: "Uses an enum" },
+      { re: "INSTANCE", msg: "Declares the INSTANCE constant" },
+      { re: "(void\\s+connect|public\\s+void\\s+connect)", msg: "Has a connect() method" },
+    ],
+    hints: ["enum AppConfig { INSTANCE; public void connect() { System.out.println(\"connected\"); } }", "Enums get serialization safety and reflection protection for free."],
+    solution: "public enum AppConfig {\n    INSTANCE;\n    public void connect() {\n        System.out.println(\"connected\");\n    }\n}",
+  },
+];

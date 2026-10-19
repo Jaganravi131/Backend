@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Java Quest — Learn Java from Zero to JVM Internals</title>
+<meta name="description" content="Java Quest: a gamified, story-driven course that teaches Java from absolute basics to advanced internals — OOP, race conditions, JVM memory, streams, and more — with interactive lessons, visual simulators, and hands-on challenges." />
+<link rel="stylesheet" href="css/styles.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>☕</text></svg>" />
+</head>
+<body>
+  <div id="confetti-layer"></div>
+
+  <!-- ============ TOP BAR ============ -->
+  <header class="topbar">
+    <button id="sidebar-toggle" class="icon-btn" aria-label="Toggle navigation">☰</button>
+    <div class="brand" id="brand-home">
+      <span class="brand-logo">☕</span>
+      <div class="brand-text">
+        <strong>Java Quest</strong>
+        <small>Zero → JVM Internals</small>
+      </div>
+    </div>
+    <div class="top-stats">
+      <div class="stat-pill streak-pill" title="Daily streak — come back every day!">
+        <span class="stat-icon">🔥</span>
+        <span id="streak-count">0</span>
+      </div>
+      <div class="stat-pill" title="Experience points">
+        <span class="stat-icon">⚡</span>
+        <span id="xp-count">0</span> XP
+      </div>
+      <div class="stat-pill level-pill" title="Your current rank">
+        <span class="stat-icon">🏆</span>
+        <span id="level-name">Newcomer</span>
+      </div>
+      <div class="progress-ring" id="progress-ring" title="Course progress">
+        <svg viewBox="0 0 44 44" width="40" height="40">
+          <circle class="ring-bg" cx="22" cy="22" r="18"></circle>
+          <circle class="ring-fg" id="ring-fg" cx="22" cy="22" r="18"></circle>
+        </svg>
+        <span class="ring-label" id="ring-label">0%</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ SIDEBAR ============ -->
+  <aside class="sidebar" id="sidebar">
+    <nav class="side-nav">
+      <a href="#" class="side-link active" data-view="home"><span class="side-ico">🗺️</span> Learning Path</a>
+      <a href="#" class="side-link" data-view="arena"><span class="side-ico">⚔️</span> Practice Arena</a>
+      <a href="#" class="side-link" data-view="glossary"><span class="side-ico">📖</span> Glossary</a>
+      <a href="#" class="side-link" data-view="achievements"><span class="side-ico">🥇</span> Achievements</a>
+      <a href="#" class="side-link" data-view="exam"><span class="side-ico">🎓</span> Final Gauntlet</a>
+    </nav>
+    <div class="side-section-title">WORLDS</div>
+    <nav class="world-nav" id="world-nav"><!-- filled by JS --></nav>
+    <div class="side-footer">
+      <button class="btn-ghost" id="reset-progress">↺ Reset progress</button>
+      <p class="tiny">Progress saved in your browser.</p>
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main" id="main">
+    <div id="view-root"><!-- filled by JS --></div>
+  </main>
+
+  <footer class="footer">
+    <div>☕ <strong>Java Quest</strong> — learn it, visualize it, implement it.</div>
+    <div class="tiny">Course flow follows the GeeksforGeeks Java syllabus + the essential extras every real Java developer must know.</div>
+  </footer>
+
+  <script src="js/glossary.js"></script>
+  <script src="js/interactives.js"></script>
+  <script src="js/content-foundations.js"></script>
+  <script src="js/content-oop.js"></script>
+  <script src="js/content-core.js"></script>
+  <script src="js/content-concurrency.js"></script>
+  <script src="js/content-modern.js"></script>
+  <script src="js/content-internals.js"></script>
+  <script src="js/arena.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
