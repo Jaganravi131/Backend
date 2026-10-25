@@ -88,7 +88,7 @@ for (const s of COURSE.sessions) {
         if (!c || !strOk(c.src)) { err(`${w}: code[${k}] missing src`); return; }
         if (!strOk(c.lang)) err(`${w}: code[${k}] missing lang`);
         if (/\t/.test(c.src)) warn(`${w}: code[${k}] contains tab characters`);
-        if (!c.legacy) for (const [re, msg] of LINT) if (re.test(c.src)) err(`${w}: code[${k}] ${msg}`);
+        if (!c.legacy && c.lint !== false) for (const [re, msg] of LINT) if (re.test(c.src)) err(`${w}: code[${k}] ${msg}`);
       });
     }
     if (sl.diagram) {

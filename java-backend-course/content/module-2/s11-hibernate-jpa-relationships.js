@@ -107,13 +107,14 @@ COURSE.session({
             public Instant getCreatedAt() { return createdAt; }
 
             @Override public boolean equals(Object o) {             // identity = database id
-                return this == o || (o instanceof User other && id != null && id.equals(other.id));
+                return this == o || (o instanceof User other && id != null && id.equals(other.getId()));
             }
             @Override public int hashCode() { return getClass().hashCode(); }   // stable before/after persist
         }` },
       notes: [
         "Always use `EnumType.STRING`: the default `ORDINAL` stores 0/1/2 and silently corrupts data when someone reorders the enum.",
         "Why this `equals`/`hashCode`? A new entity has no id until it is persisted; a hash code based on the id would change and break `HashSet` membership (Session 5!). A constant per-class hash code with id-based equality is the standard safe recipe.",
+        "Note `other.getId()` rather than `other.id`: Hibernate may hand you a lazy *proxy* subclass whose fields are not populated — only its getters load the real data.",
         "Records cannot be entities (entities need mutability and a no-arg constructor), but they are perfect for DTOs and projections."
       ]
     },
