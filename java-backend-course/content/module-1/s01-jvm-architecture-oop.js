@@ -175,7 +175,7 @@ COURSE.session({
         "`ClassNotFoundException` \u2014 a class requested by name (e.g. `Class.forName`) is not found.",
         "`NoClassDefFoundError` \u2014 a class present at compile time is missing (or failed to initialise) at runtime."
       ],
-      code: { lang: 'java', file: 'Loaders.java', verify: 'compile', src: code`
+      code: { lang: 'java', file: 'Loaders.java', verify: 'run', src: code`
         public class Loaders {
             public static void main(String[] args) {
                 System.out.println(String.class.getClassLoader());              // bootstrap

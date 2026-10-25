@@ -107,7 +107,7 @@ COURSE.session({
       type: 'practical',
       title: 'Thread safety & how singletons break',
       lead: 'The naive lazy singleton uses *check-then-act*, which is **not atomic** — under concurrency several threads create their own instance.',
-      code: { lang: 'java', file: 'RaceDemo.java', verify: 'compile', src: code`
+      code: { lang: 'java', file: 'RaceDemo.java', verify: 'run', src: code`
         import java.util.concurrent.*;
         import java.util.concurrent.atomic.AtomicInteger;
 

@@ -117,7 +117,7 @@ COURSE.session({
       type: 'practical',
       title: 'Lost updates — and four ways to fix a counter',
       lead: 'Four threads each increment four counters 100,000 times. Only the unsynchronized one is wrong.',
-      code: { lang: 'java', file: 'CounterDemo.java', verify: 'compile', src: code`
+      code: { lang: 'java', file: 'CounterDemo.java', verify: 'run', src: code`
         import java.util.concurrent.*;
         import java.util.concurrent.atomic.*;
 

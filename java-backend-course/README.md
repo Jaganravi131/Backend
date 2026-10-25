@@ -106,6 +106,13 @@ The **API lint** in `validate.mjs` rejects code samples that use removed or outd
 `spring-boot-starter-web`, ZooKeeper, `spring.cloud.gateway.routes`, `@HystrixCommand`
 outside legacy examples, …). Opt out per block with `legacy: true` or `lint: false`.
 
+`verify-java.mjs` compiles every self-contained Java example (a `main` method and JDK-only
+imports), runs it and compares the real output with the slide's `out`. Per code tab:
+`verify: false` skips it (fragments, pseudo-code); `verify: 'run'` runs it without comparing
+the output (it varies per run, e.g. thread races) but it must still exit cleanly;
+`verify: 'compile'` only compiles it (it needs an outside service such as MySQL). Spring,
+Kafka and Redis samples need Maven dependencies, so this script does not compile them.
+
 ## Authoring a slide
 
 Each session file calls `COURSE.session({...})`:
