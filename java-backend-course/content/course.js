@@ -156,7 +156,7 @@
     java: 'Java 21 LTS (Java 25 LTS also works)',
     boot: 'Spring Boot 4.1.x (Spring Framework 7)',
     cloud: 'Spring Cloud 2025.1.x "Oakwood"',
-    build: 'Maven 3.9 (via ./mvnw wrapper)',
+    build: 'Maven 3.9 / 3.10 (via the ./mvnw wrapper)',
     db: 'MySQL 8.4 LTS',
     redis: 'Redis 7',
     kafka: 'Apache Kafka 4.x (KRaft mode, no ZooKeeper)',

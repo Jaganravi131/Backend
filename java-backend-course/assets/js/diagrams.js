@@ -67,14 +67,15 @@
     var msgs = d.msgs.map(function (m) {
       return { f: ix(m[0]), t: ix(m[1]), l: String(m[2]), r: m[3] === 'r' };
     });
-    var colW = 150;
-    A.forEach(function (a) { colW = Math.max(colW, a.length * 8 + 30); });
-    msgs.forEach(function (m) {
-      var span = Math.max(1, Math.abs(m.t - m.f));
-      var need = m.f === m.t ? (m.l.length * 6.4 + 24) : (m.l.length * 6.4 + 44) / span;
+    var colW = 140;
+    A.forEach(function (a) { colW = Math.max(colW, a.length * 8.5 + 30); });
+    msgs.forEach(function (m, k) {
+      if (m.f === m.t) return;                         // notes may overflow their column
+      var span = Math.abs(m.t - m.f);
+      var need = ((String(k + 1).length + 2 + m.l.length) * 6.9 + 36) / span;
       if (need > colW) colW = need;
     });
-    colW = Math.min(Math.ceil(colW), 300);
+    colW = Math.min(Math.ceil(colW), 270);
     var padX = 10, top = 56, rowH = 38;
     var W = padX * 2 + colW * n, H = top + rowH * msgs.length + 16;
     var x = function (i) { return padX + colW * i + colW / 2; };
@@ -92,7 +93,7 @@
       var y = top + rowH * k + 18;
       var label = (k + 1) + '. ' + m.l;
       if (m.f === m.t) {
-        var w = Math.min(label.length * 6.4 + 18, W - 8);
+        var w = Math.min(label.length * 6.7 + 20, W - 8);
         var nx = Math.max(4, Math.min(W - w - 4, x(m.f) - w / 2));
         s += '<rect class="sq-note" x="' + nx + '" y="' + (y - 15) + '" width="' + w + '" height="24" rx="6"/>';
         s += '<text class="sq-nt" x="' + (nx + w / 2) + '" y="' + (y + 1) + '" text-anchor="middle">' + esc(label) + '</text>';

@@ -404,7 +404,8 @@ html[data-theme="light"] .code pre.code-out { background: #eef3ef; color: #0b5a2
 .dg-org li:last-child::before { border-right: 1.5px solid var(--line2); border-radius: 0 6px 0 0; }
 .dg-org li:first-child::after { border-radius: 6px 0 0 0; }
 .dg-org ul ul::before { content: ""; position: absolute; top: 0; left: 50%; height: 18px; border-left: 1.5px solid var(--line2); }
-.dg-org .dg-tn { white-space: normal; text-align: center; max-width: 150px; font-size: 12.5px; }
+.dg-org .dg-tn { white-space: normal; text-align: center; max-width: 170px; font-size: 12.5px; }
+.dg-org .dg-tn small { display: block; font-size: 11px; margin-top: 1px; }
 svg.dg-seq, svg.dg-graph { width: 100%; height: auto; display: block; font-family: var(--font); }
 .dg-seqwrap, .dg-graphwrap { background: var(--card2); border: 1px solid var(--line); border-radius: 12px; padding: 8px; }
 .sq-life { stroke: var(--line2); stroke-dasharray: 4 4; stroke-width: 1.5; }
@@ -413,9 +414,9 @@ svg.dg-seq, svg.dg-graph { width: 100%; height: auto; display: block; font-famil
 .sq-msg { stroke: var(--text); stroke-width: 1.4; opacity: .85; }
 .sq-reply { stroke-dasharray: 5 4; opacity: .7; }
 .sq-head { fill: var(--text); }
-.sq-ml { fill: var(--text); font-size: 11.5px; }
+.sq-ml { fill: var(--text); font-size: 12.5px; }
 .sq-note { fill: color-mix(in srgb, var(--c-summary) 22%, var(--card)); stroke: color-mix(in srgb, var(--c-summary) 60%, transparent); }
-.sq-nt { fill: var(--text); font-size: 11.5px; font-style: italic; }
+.sq-nt { fill: var(--text); font-size: 12px; font-style: italic; }
 .gr-edge { stroke: var(--muted); stroke-width: 1.6; fill: none; }
 .gr-node rect { fill: color-mix(in srgb, var(--tc) 16%, var(--card)); stroke: color-mix(in srgb, var(--tc) 70%, transparent); stroke-width: 1.8; }
 .gr-t { fill: var(--text); font-weight: 800; font-size: 13px; }
