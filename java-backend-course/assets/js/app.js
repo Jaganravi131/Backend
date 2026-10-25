@@ -15,6 +15,7 @@
   var codeSeq = 0;
 
   function $(s, el) { return (el || document).querySelector(s); }
+  function scrollTo(el, opts) { if (el && typeof el.scrollIntoView === 'function') el.scrollIntoView(opts); }
   function $$(s, el) { return Array.prototype.slice.call((el || document).querySelectorAll(s)); }
 
   /* ------------------------------------------------------------ storage */
@@ -330,7 +331,7 @@
     cur = null;
     document.body.classList.remove('present', 'side-on');
     app.innerHTML = header(active) + '<main class="page" id="main">' + html + '</main>' + footer();
-    window.scrollTo(0, 0);
+    try { window.scrollTo(0, 0); } catch (e) { /* non-browser */ }
     document.title = (title ? title + ' \u00B7 ' : '') + 'Java Backend \u2014 Interactive Course Notes';
   }
 
@@ -518,9 +519,9 @@
     var sNo = e.session ? e.session.no : null;
     $$('.side-s').forEach(function (det) { if (+det.getAttribute('data-s') === sNo) det.open = true; });
     var act = $('.side-i.on');
-    if (act && act.scrollIntoView) {
+    if (act) {
       var side = $('#side'), r = act.getBoundingClientRect(), sr = side.getBoundingClientRect();
-      if (r.top < sr.top || r.bottom > sr.bottom) act.scrollIntoView({ block: 'center' });
+      if (r.top < sr.top || r.bottom > sr.bottom) scrollTo(act, { block: 'center' });
     }
     document.title = (e.kind === 'slide' ? MD.strip(e.slide.title) + ' \u00B7 S' + e.session.no : e.title + ' \u00B7 Module ' + d.module.no) + ' \u00B7 Java Backend Notes';
     if (window.innerWidth < 960) document.body.classList.remove('side-on');
@@ -537,7 +538,7 @@
       var b = $('.notes-h', n); if (b) b.setAttribute('aria-expanded', S.notes);
       var k = $('.notes-k', n); if (k) k.innerHTML = '<kbd>N</kbd> ' + (S.notes ? 'hide' : 'show');
     });
-    if (S.notes) { var n = $('.notes'); if (n && cur) n.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+    if (S.notes && cur) scrollTo($('.notes'), { behavior: 'smooth', block: 'nearest' });
   }
   function toggleSide() {
     if (window.innerWidth < 960) { document.body.classList.toggle('side-on'); return; }
@@ -631,7 +632,7 @@
     });
     h += group('Wrap-up', [d.list[d.list.length - 1]]) + '</div>';
     overlay('Slide overview \u2014 Module ' + d.module.no, h, 'wide');
-    var on = $('.ov-t.on'); if (on) on.scrollIntoView({ block: 'center' });
+    scrollTo($('.ov-t.on'), { block: 'center' });
   }
 
   var IDX = null;
@@ -706,7 +707,7 @@
         if (!items.length) return;
         sel = (sel + (ev.key === 'ArrowDown' ? 1 : -1) + items.length) % items.length;
         items.forEach(function (a, i) { a.classList.toggle('on', i === sel); });
-        items[sel].scrollIntoView({ block: 'nearest' });
+        scrollTo(items[sel], { block: 'nearest' });
       } else if (ev.key === 'Enter' && items[sel]) {
         ev.preventDefault();
         location.hash = items[sel].getAttribute('href');

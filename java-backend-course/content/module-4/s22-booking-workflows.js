@@ -15,13 +15,13 @@ COURSE.session({
       type: 'theory',
       title: 'The booking state machine',
       lead: 'A booking moves through well-defined states. Making transitions explicit prevents impossible situations like confirming an expired booking.',
-      diagram: { kind: 'graph', cw: 215, ch: 110, bw: 150, nodes: [
+      diagram: { kind: 'graph', cw: 250, ch: 110, bw: 160, nodes: [
         { id: 'p', t: 'PENDING', s: 'nights held 15 min', x: 0, y: 1, tone: 'yellow' },
         { id: 'c', t: 'CONFIRMED', s: 'paid', x: 1, y: 0, tone: 'green' },
         { id: 'x', t: 'CANCELLED', s: 'by guest / payment failed', x: 1, y: 2, tone: 'red' },
-        { id: 'e', t: 'EXPIRED', s: 'unpaid in time', x: 2, y: 2, tone: 'gray' },
+        { id: 'e', t: 'EXPIRED', s: 'unpaid in time', x: 0, y: 2, tone: 'gray' },
         { id: 'd', t: 'COMPLETED', s: 'after check-out', x: 2, y: 0, tone: 'purple' }
-      ], edges: [['p', 'c', 'payment.completed'], ['p', 'x', 'payment.failed'], ['p', 'e', 'timeout'], ['c', 'x', 'cancel → refund'], ['c', 'd', 'check-out passed']] },
+      ], edges: [['p', 'c', 'payment.completed'], ['p', 'x', 'payment.failed'], ['p', 'e', 'timeout'], ['c', 'x', 'cancel → refund'], ['c', 'd', 'check-out']] },
       table: { head: ['Transition', 'Trigger', 'Side effects'], rows: [
         ['PENDING → CONFIRMED', '`payment.completed` event', 'notify guest & host'],
         ['PENDING → CANCELLED', '`payment.failed` event or guest cancels', 'release nights (compensation)'],

@@ -36,7 +36,7 @@ COURSE.session({
       type: 'theory',
       title: 'Entity lifecycle & the persistence context',
       lead: 'Inside a transaction, the **persistence context** tracks every managed entity — it is a first-level cache and a change detector.',
-      diagram: { kind: 'graph', cw: 200, ch: 96, nodes: [
+      diagram: { kind: 'graph', cw: 235, ch: 100, nodes: [
         { id: 'new', t: 'Transient', s: 'new User(...)', x: 0, y: 0, tone: 'gray' },
         { id: 'man', t: 'Managed', s: 'tracked in context', x: 1, y: 0, tone: 'green' },
         { id: 'det', t: 'Detached', s: 'context closed', x: 2, y: 0, tone: 'yellow' },

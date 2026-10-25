@@ -7,12 +7,14 @@
   "scripts": {
     "validate": "node tools/validate.mjs",
     "test:render": "node tools/render-test.mjs",
+    "verify:java": "node tools/verify-java.mjs",
     "build:pptx": "node tools/build-pptx.mjs",
-    "serve": "python3 -m http.server 8000 --bind 0.0.0.0",
-    "check": "npm run validate && npm run test:render"
+    "check": "npm run validate && npm run test:render",
+    "serve": "python3 -m http.server 8000 --bind 0.0.0.0"
   },
   "devDependencies": {
     "jsdom": "^26.1.0",
+    "jszip": "^3.10.2",
     "pptxgenjs": "^4.0.1"
   }
 }

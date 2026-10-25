@@ -531,6 +531,9 @@ body.printing .fc { min-height: 0; }
   a { color: inherit; }
 }
 
+/* long inline code inside flex rows must shrink and wrap instead of overflowing */
+.lab label > span, .qz-t, .agenda a > span:last-child, .si-t, .sr-s, .check li { min-width: 0; overflow-wrap: anywhere; }
+
 /* ---------- responsive ---------- */
 @media (max-width: 1100px) {
   .sl-split { grid-template-columns: minmax(0, 1fr); }
@@ -554,6 +557,10 @@ body.printing .fc { min-height: 0; }
   .site-nav { order: 3; flex-basis: 100%; }
 }
 @media (max-width: 640px) {
+  .btn { white-space: normal; text-align: left; }
+  .dg-tn { white-space: normal; }
+  .dg-list ul { padding-left: 12px; }
+  .dg-list li { padding-left: 12px; }
   .ctrl .nav span { display: none; }
   .ctrl { gap: 6px; padding: 0 8px; }
   .ctrl-tools { gap: 4px; }
