@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Java Backend — Interactive Course Notes</title>
+  <meta name="description" content="Interactive slide decks with detailed notes for the 24-session Java Backend Development syllabus: Core Java, Spring Boot, REST, databases, testing, security, Redis, OAuth2, microservices, Kafka, Docker and AWS.">
+  <meta name="theme-color" content="#0e1210">
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="assets/css/styles.css">
+  <script>
+    /* apply saved theme before first paint */
+    try {
+      var s = JSON.parse(localStorage.getItem('jbc-progress-v1') || '{}');
+      var t = s.theme || (matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+      document.documentElement.setAttribute('data-theme', t);
+    } catch (e) {}
+  </script>
+</head>
+<body>
+  <div id="app"><p style="padding:40px;font-family:system-ui">Loading course notes…</p></div>
+  <noscript><p style="padding:40px;font-family:system-ui">This interactive course needs JavaScript. You can still read the raw notes in the <code>content/</code> folder.</p></noscript>
+
+  <!-- syntax highlighting (vendored, works offline) -->
+  <script src="assets/vendor/highlight/highlight.min.js"></script>
+  <script src="assets/vendor/highlight/languages/dockerfile.min.js"></script>
+  <script src="assets/vendor/highlight/languages/properties.min.js"></script>
+  <script src="assets/vendor/highlight/languages/http.min.js"></script>
+
+  <!-- course data -->
+  <script src="content/course.js"></script>
+  <!-- @sessions:start (tools/validate.mjs checks this list against the content folder) -->
+  <script src="content/module-1/s01-jvm-architecture-oop.js"></script>
+  <script src="content/module-1/s02-abstraction-interfaces-exceptions.js"></script>
+  <script src="content/module-1/s03-singleton-propagation-lambdas.js"></script>
+  <script src="content/module-1/s04-collections-queues-generics.js"></script>
+  <script src="content/module-1/s05-streams-hashmap-hashing.js"></script>
+  <script src="content/module-1/s06-multithreading-executors-maven.js"></script>
+  <script src="content/module-2/s07-maven-project-setup.js"></script>
+  <script src="content/module-2/s08-spring-boot-mvc-http.js"></script>
+  <script src="content/module-2/s09-rest-aop-lombok.js"></script>
+  <script src="content/module-2/s10-jdbc-jdbctemplate-crud.js"></script>
+  <script src="content/module-2/s11-hibernate-jpa-relationships.js"></script>
+  <script src="content/module-2/s12-splitwise-part1.js"></script>
+  <script src="content/module-3/s13-splitwise-part2.js"></script>
+  <script src="content/module-3/s14-junit-mockito-mockmvc.js"></script>
+  <script src="content/module-3/s15-redis-caching.js"></script>
+  <script src="content/module-3/s16-spring-security.js"></script>
+  <script src="content/module-3/s17-splitwise-cursor-ai.js"></script>
+  <script src="content/module-3/s18-oauth2-github.js"></script>
+  <script src="content/module-4/s19-microservices-feign.js"></script>
+  <script src="content/module-4/s20-kafka-circuit-breaker.js"></script>
+  <script src="content/module-4/s21-airbnb-hlsd-data-model.js"></script>
+  <script src="content/module-4/s22-booking-workflows.js"></script>
+  <script src="content/module-4/s23-gateway-docker-deploy.js"></script>
+  <script src="content/module-4/s24-observability-production.js"></script>
+  <!-- @sessions:end -->
+
+  <!-- engine -->
+  <script src="assets/js/md.js"></script>
+  <script src="assets/js/diagrams.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
