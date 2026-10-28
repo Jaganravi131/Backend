@@ -20,7 +20,7 @@ report/
 │   ├── IDFP_BinGenie_Technical_Audit.docx
 │   ├── BinGenie_What_We_Can_Use.docx
 │   ├── BinGenie_Code_Evidence_Audit.docx
-│   └── (final report goes here)
+│   └── BinGenie_Sem_Report.docx      <- the submission
 │
 ├── assets/
 │   └── figures/               generated and supplied figures
@@ -30,11 +30,20 @@ report/
 │   ├── make_figure.py         regenerates the architecture figure
 │   ├── build_audit.py         regenerates the technical audit
 │   ├── build_spec.py          regenerates the carry-forward specification
-│   └── build_code_audit.py    regenerates the code evidence audit
+│   ├── build_code_audit.py    regenerates the code evidence audit
+│   ├── make_report_figures.py regenerates the six report figures
+│   └── build_report.py        builds the full semester report
 │
 └── templates/                 drop the semester template here
     └── README.md
 ```
+
+### Opening the report
+
+`BinGenie_Sem_Report.docx` contains live Word fields: the table of contents, the list of figures
+and the list of tables are generated from the document's own headings and captions. The file is
+flagged to refresh them when opened, so Word will offer to update the fields — accept it. If a
+list still shows a grey placeholder sentence, click on it and press **F9**.
 
 **Rule: never hand-edit a file in `deliverables/`.** Edit the script in `src/`, run
 `./report/build.sh`, and the document is regenerated consistently. This is what keeps
@@ -61,7 +70,7 @@ deterministic — same source, same document.
 | `IDFP_BinGenie_Technical_Audit.docx` | Verification of every metric, table and claim in the IEOM conference paper and the previous-semester lab report. 14 blockers, 7 major, editorial register, master value ledger. | Done |
 | `BinGenie_What_We_Can_Use.docx` | The carry-forward specification: what survives as fact, what must be re-specified, hardware part numbers, interface table, dimension set, class-to-compartment mapping, market-sizing method, four-log measurement plan, chapter-by-chapter map. | Done |
 | `BinGenie_Code_Evidence_Audit.docx` | File-by-file reading of both GitHub repositories, against the metrics claimed in the paper and report. Verdict per metric, provenance trace, the real detection-log analysis, and the pipeline that produces genuine numbers. | Done |
-| `BinGenie_Sem_Report.docx` | The full report built from the semester template. | **Pending template** |
+| `BinGenie_Sem_Report.docx` | **The submission.** Nine chapters plus five appendices, 7 figures, 19 tables. Built from the master value ledger: measured results separated from design targets, no fabricated model metrics, automatic contents / list of figures / list of tables. | Done |
 
 The two finished documents are the working answer to *"what can we actually use?"*.
 The third is the actual submission and is built once `templates/` has the current template.

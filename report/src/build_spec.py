@@ -353,7 +353,7 @@ table(["Element", "What you have", "Verdict", "What the new report should say"],
       [["Dual carousel disc mechanism", "Two Ø380 × 18 mm ABS discs, upper with a cup extrusion, lower with arc apertures, NEMA 17 + DRV8825, 4 index positions",
         "USE", "Describe as designed and built. Dimension it. This is the novelty — lead with it."],
        ["Four detachable compartments", "Ø156 × 370 mm HDPE, colour-coded, independently removable", "USE",
-        "Keep, with a dimensioned 2×2 arrangement and the 112 mm centre radius shown (§4)."],
+        "Keep, with the four cardinal positions on the 112 mm centre radius dimensioned (§4)."],
        ["Sensor suite", "Moisture, capacitive, inductive, ToF, load cell, MQ-135, OV5647 camera", "USE",
         "Keep the set. State the part numbers and what each one actually decides (§3)."],
        ["Raspberry Pi 4 control", "Pi 4 Model B, 4 GB, Python + TFLite, 6-state machine", "USE",
@@ -478,15 +478,15 @@ note("Every row here is a fact about your build that no reviewer can argue with.
 
 # ================================================================== 4
 h1("4. Geometry: the numbers to draw", pagebreak=True)
-para("The dimensions in the old documents are correct but never assembled into a layout, which is why the 2.4 mm "
-     "clearance problem went unnoticed. This is the layout they imply. Put it in the drawing and the report gains a "
+para("The dimensions in the old documents are correct but never assembled into a layout, which is why neither the "
+     "2.4 mm clearance problem nor the arrangement itself was ever checked. This is the layout they imply. Put it in the drawing and the report gains a "
      "level of detail that is unusual at this stage.")
 
 table(["Dimension", "Value", "Derivation / note"],
       [["Overall height", "750 mm", "As stated in both documents"],
        ["Overall width", "450 mm", "As stated"],
        ["Compartment", "4 × Ø156 × 370 mm", "As stated; 370 × 2 = 740 mm inside a 750 mm body is tight — check the 2×2 stack"],
-       ["Compartment arrangement", "2 × 2 cluster, 312 mm × 312 mm", "4 × 156 = 624 mm will not fit a 450 mm body in one row"],
+       ["Compartment arrangement", "Four at 90° (cardinal), centre radius 112 mm", "Each outer edge is flush with the disc rim. A 2×2 square cluster reaches 236 mm from the axis and cannot fit a Ø380 disc; four in a row need 624 mm in a 450 mm body."],
        ["Compartment centre radius", "112 mm", "(380 − 156)/2 — the whole layout is bounded by this"],
        ["Gap between compartment circles", "2.4 mm", "112√2 − 156 — this is why 0.5° repeatability is required"],
        ["Disc", "2 × Ø380 × 18 mm, ABS", "As stated"],
