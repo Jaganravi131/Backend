@@ -1,0 +1,7 @@
+# generated archives / exports
+*.zip
+report-export.zip
+
+# python
+__pycache__/
+*.pyc

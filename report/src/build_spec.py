@@ -12,6 +12,10 @@ NAVY = RGBColor(0x1F, 0x38, 0x64)
 RED = RGBColor(0xA6, 0x1B, 0x1B)
 GREEN = RGBColor(0x1E, 0x60, 0x33)
 GREY = RGBColor(0x40, 0x40, 0x40)
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FIG = os.path.join(BASE, "assets", "figures", "Fig_System_Architecture.png")
+OUTDIR = os.path.join(BASE, "deliverables")
+
 BODY = "Times New Roman"
 TBL = "Calibri"
 
@@ -391,8 +395,7 @@ p = doc.add_paragraph()
 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
 p.paragraph_format.space_before = Pt(6)
 p.paragraph_format.space_after = Pt(2)
-p.add_run().add_picture(os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                     "Fig_System_Architecture.png"), width=Cm(16.4))
+p.add_run().add_picture(FIG, width=Cm(16.4))
 caption("Figure 2.1 — System architecture. Four functional columns, an explicit interface key, and the power bus separated from the signal path.")
 note("Use this figure (or redraw it in the same layout) in Chapter 7 of the new report. What makes it credible is not the boxes but the "
      "interface labels: MIPI-CSI, I²C + ADC, GPIO STEP/DIR/EN, MQTT. A block diagram without interfaces is a sketch.")
@@ -671,6 +674,7 @@ r = p.add_run("Use the machine exactly as built, and describe it with the dimens
               "yours. Then the report says what the project did, instead of what it hopes.")
 r.font.size = Pt(10.5)
 
-out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "BinGenie_What_We_Can_Use.docx")
+os.makedirs(OUTDIR, exist_ok=True)
+out = os.path.join(OUTDIR, "BinGenie_What_We_Can_Use.docx")
 doc.save(out)
 print("saved:", out)

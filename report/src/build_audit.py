@@ -901,6 +901,9 @@ r = p.add_run("Fourteen of the twenty-six ledger rows are blockers, and every on
               "template arrives, the report can be built directly from the right-hand column of Table 10.1.")
 r.font.size = Pt(10.5)
 
-out = os.path.join(os.path.dirname(os.path.abspath(__file__)), "IDFP_BinGenie_Technical_Audit.docx")
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUTDIR = os.path.join(BASE, "deliverables")
+os.makedirs(OUTDIR, exist_ok=True)
+out = os.path.join(OUTDIR, "IDFP_BinGenie_Technical_Audit.docx")
 doc.save(out)
 print("saved:", out)

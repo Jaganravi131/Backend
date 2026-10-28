@@ -1,11 +1,19 @@
 #!/usr/bin/env python3
-"""System architecture figure for the carry-forward specification."""
+"""System architecture figure for the carry-forward specification.
+
+Writes: report/assets/figures/Fig_System_Architecture.png
+"""
+from pathlib import Path
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 from matplotlib.patches import FancyBboxPatch, FancyArrowPatch, Rectangle
 
 plt.rcParams["font.family"] = "serif"
+
+BASE = Path(__file__).resolve().parents[1]
+FIGDIR = BASE / "assets" / "figures"
+FIGDIR.mkdir(parents=True, exist_ok=True)
 
 NAVY = "#1F3864"
 STEEL = "#2E5C8A"
@@ -128,5 +136,6 @@ ax.text(3.0, 2.9, "Cycle: trigger → capture → infer → fuse → index (≤ 
         fontsize=4.8, color=STEEL, ha="left", va="center", style="italic")
 
 plt.subplots_adjust(left=0.004, right=0.996, top=0.996, bottom=0.004)
-fig.savefig("Fig_System_Architecture.png", dpi=400, facecolor="white")
-print("saved")
+out = FIGDIR / "Fig_System_Architecture.png"
+fig.savefig(out, dpi=400, facecolor="white")
+print("saved:", out)
