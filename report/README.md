@@ -19,6 +19,7 @@ report/
 ├── deliverables/              documents to submit — these are the outputs
 │   ├── IDFP_BinGenie_Technical_Audit.docx
 │   ├── BinGenie_What_We_Can_Use.docx
+│   ├── BinGenie_Code_Evidence_Audit.docx
 │   └── (final report goes here)
 │
 ├── assets/
@@ -28,7 +29,8 @@ report/
 ├── src/                       build scripts — edit these, not the .docx
 │   ├── make_figure.py         regenerates the architecture figure
 │   ├── build_audit.py         regenerates the technical audit
-│   └── build_spec.py          regenerates the carry-forward specification
+│   ├── build_spec.py          regenerates the carry-forward specification
+│   └── build_code_audit.py    regenerates the code evidence audit
 │
 └── templates/                 drop the semester template here
     └── README.md
@@ -58,6 +60,7 @@ deterministic — same source, same document.
 |---|---|---|
 | `IDFP_BinGenie_Technical_Audit.docx` | Verification of every metric, table and claim in the IEOM conference paper and the previous-semester lab report. 14 blockers, 7 major, editorial register, master value ledger. | Done |
 | `BinGenie_What_We_Can_Use.docx` | The carry-forward specification: what survives as fact, what must be re-specified, hardware part numbers, interface table, dimension set, class-to-compartment mapping, market-sizing method, four-log measurement plan, chapter-by-chapter map. | Done |
+| `BinGenie_Code_Evidence_Audit.docx` | File-by-file reading of both GitHub repositories, against the metrics claimed in the paper and report. Verdict per metric, provenance trace, the real detection-log analysis, and the pipeline that produces genuine numbers. | Done |
 | `BinGenie_Sem_Report.docx` | The full report built from the semester template. | **Pending template** |
 
 The two finished documents are the working answer to *"what can we actually use?"*.
@@ -110,8 +113,8 @@ list of what is still outstanding.
 
 These block the parts of the final report that cannot be derived from the existing documents:
 
-1. Dataset counts per source and per class, after cleaning
-2. One test run: model file, TFLite version, quantisation, Pi power mode, per-class support
+1. A completed training run — `train.py` then `eval_per_class.py`, per Table 5.1 of the code audit
+2. Dataset counts per source and per class, after cleaning
 3. Survey: n, method, location, date, questionnaire
 4. Prototype BOM with actual unit costs, and build cost
 5. Unit price to quote and target margin
