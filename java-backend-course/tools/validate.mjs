@@ -277,7 +277,7 @@ console.log(`Brochure topics covered: ${covered}/${topics}`);
     `(${coding.filter((x) => x.difficulty === 'Hard').length} Hard) \u00B7 design rounds ${n('design')} \u00B7 Q&As ${qaN} \u00B7 interview-level quiz Qs ${hardQ}`);
   if (!packsMissing.length && n('design') < 10) err(`the interview track needs >= 10 design rounds (has ${n('design')})`);
 }
-if (packsMissing.length) warn(`interview packs missing for sessions: ${packsMissing.join(', ')}`);
+if (packsMissing.length) (partial ? warn : err)(`interview packs missing for sessions: ${packsMissing.join(', ')}`);
 for (const m of COURSE.modules) {
   const ss = COURSE.sessions.filter((s) => s.no >= m.sessions[0] && s.no <= m.sessions[1]);
   console.log(`  M${m.no}: ${ss.length} sessions, ${ss.reduce((a, s) => a + s.slides.length, 0)} slides`);
