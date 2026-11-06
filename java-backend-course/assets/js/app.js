@@ -5,7 +5,8 @@
  *   #/                home            #/syllabus   syllabus coverage map
  *   #/projects        projects        #/print/N    printable notes for module N
  *   #/m/N             module N cover  #/m/N/end    module wrap-up
- *   #/s/N             session cover   #/s/N/K      slide K of session N        */
+ *   #/s/N             session cover   #/s/N/K      slide K of session N
+ *   #/interview[/tab] FAANG interview track: coding, design, bank, mock, patterns, behavioral */
 (function () {
   'use strict';
   var C = window.COURSE, MD = window.MD, DG = window.DG;
@@ -20,7 +21,7 @@
 
   /* ------------------------------------------------------------ storage */
   var KEY = 'jbc-progress-v1';
-  function fresh() { return { viewed: {}, quiz: {}, labs: {}, notes: true, side: true, theme: null }; }
+  function fresh() { return { viewed: {}, quiz: {}, labs: {}, rounds: {}, iq: {}, scratch: {}, mock: null, notes: true, side: true, theme: null }; }
   var S = (function () {
     try { var x = JSON.parse(localStorage.getItem(KEY) || 'null'); return x ? Object.assign(fresh(), x) : fresh(); }
     catch (e) { return fresh(); }
@@ -64,16 +65,26 @@
     });
   }
   function totals() {
-    var t = { slides: 0, code: 0, labs: 0, quizQ: 0, diagrams: 0, theory: 0, practical: 0, sessions: C.sessions.length };
+    var t = { slides: 0, code: 0, labs: 0, quizQ: 0, diagrams: 0, theory: 0, practical: 0, sessions: C.sessions.length,
+      deep: 0, coding: 0, codingHard: 0, design: 0, qa: 0, hardQ: 0 };
     C.sessions.forEach(function (s) {
       s.slides.forEach(function (sl) {
         t.slides++;
         if (sl.code) t.code += [].concat(sl.code).length;
         if (sl.diagram) t.diagrams += [].concat(sl.diagram).length;
         if (sl.steps) t.labs++;
-        if (sl.quiz) t.quizQ += sl.quiz.length;
+        if (sl.quiz) {
+          t.quizQ += sl.quiz.length;
+          t.hardQ += sl.quiz.filter(function (q) { return q.level >= 2; }).length;
+        }
         if (sl.type === 'theory') t.theory++;
         if (sl.type === 'practical') t.practical++;
+        if (sl.type === 'deep') t.deep++;
+        if (sl.type === 'coding') { t.coding++; if (sl.difficulty === 'Hard') t.codingHard++; }
+        if (sl.type === 'design') t.design++;
+        if (sl.qa) t.qa += sl.qa.length;
+        (sl.stages || []).forEach(function (st) { if (st.diagram) t.diagrams++; if (st.code) t.code += [].concat(st.code).length; });
+        (sl.qa || []).forEach(function (x) { if (x.code) t.code++; });
       });
     });
     return t;
@@ -156,7 +167,8 @@
   function quizHTML(qs, key) {
     var h = '<div class="quiz" data-quiz="' + key + '">';
     qs.forEach(function (q, qi) {
-      h += '<div class="qz" data-q="' + qi + '"><p class="qz-q"><b>Q' + (qi + 1) + '.</b> ' + inl(q.q) + '</p><div class="qz-opts">' +
+      h += '<div class="qz" data-q="' + qi + '"><p class="qz-q"><b>Q' + (qi + 1) + '.</b> ' + lvlBadge(q.level) + inl(q.q) + '</p>' +
+        (q.code ? quizCode(q.code) : '') + '<div class="qz-opts">' +
         q.options.map(function (o, oi) {
           return '<button class="qz-o" data-act="answer" data-o="' + oi + '"><span class="qz-l">' + 'ABCDEF'.charAt(oi) +
             '</span><span class="qz-t">' + inl(o) + '</span></button>';
@@ -212,6 +224,223 @@
   }
   function bar(p) { return '<div class="pbar" title="' + p.pct + '% viewed"><i style="width:' + p.pct + '%"></i></div>'; }
 
+  /* ------------------------------------------------------------ interview track components */
+  var LV = C.levels || { 1: 'SDE-1', 2: 'SDE-2', 3: 'Senior' };
+  var PAT = {};
+  ((C.track && C.track.patterns) || []).forEach(function (p) { PAT[p.id] = p; });
+  function patLabel(id) { return PAT[id] ? PAT[id].name : id; }
+  function slug(x) { return MD.strip(x).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 60); }
+  /* stable key for self-ratings / notes: survives slides being inserted before it */
+  function rkey(e) { return e.session.id + '#' + slug(e.slide.title); }
+  function lvlBadge(l) { return l ? '<span class="lvl l' + l + '" title="Expected seniority">' + esc(LV[l] || 'L' + l) + '</span> ' : ''; }
+  function diffBadge(d) { return d ? '<span class="diff d-' + esc(String(d).toLowerCase()) + '">' + esc(d) + '</span>' : ''; }
+  function allCode(s) {
+    var out = [].concat(s.code || []);
+    (s.qa || []).forEach(function (x) { if (x.code) out = out.concat(x.code); });
+    (s.stages || []).forEach(function (x) { if (x.code) out = out.concat(x.code); });
+    (s.quiz || []).forEach(function (x) { if (x.code && typeof x.code === 'object') out.push(x.code); });
+    return out;
+  }
+  function quizCode(c) {
+    var t = typeof c === 'string' ? { src: c } : c;
+    return codeHTML({ lang: t.lang || 'java', file: t.file || 'Predict the output', src: t.src });
+  }
+  function stretchHTML(list) {
+    return '<div class="stretch"><div class="stretch-h">\u{1F680} Level up \u2014 interview-grade stretch goals</div>' + MD.points(list) + '</div>';
+  }
+  function revealHTML(label, inner) {
+    if (PRINT) return '<div class="rv open"><div class="rv-h">' + label + '</div><div class="rv-c">' + inner + '</div></div>';
+    return '<div class="rv"><button class="rv-b" data-act="reveal" aria-expanded="false"><span>\u25B8 ' + label + '</span><small>click to reveal</small></button>' +
+      '<div class="rv-c" hidden>' + inner + '</div></div>';
+  }
+
+  /* interview clock: one shared ticker updates whichever timer is on screen */
+  var TIMERS = {};
+  function fmtMs(ms) { var x = Math.max(0, Math.ceil(ms / 1000)); return Math.floor(x / 60) + ':' + ('0' + x % 60).slice(-2); }
+  function timerHTML(k, min) {
+    if (!min) return '';
+    if (PRINT) return '<span class="chip">\u23F1 ' + min + ' min</span>';
+    var t = TIMERS[k] || (TIMERS[k] = { total: min * 60000, left: min * 60000, end: null });
+    var left = t.end ? t.end - Date.now() : t.left;
+    return '<span class="timer' + (t.end ? ' run' : '') + (left <= 0 ? ' up' : '') + '" data-timer="' + esc(k) + '" title="Interview clock (' + min + ' min)">' +
+      '<span class="tm-ic" aria-hidden="true">\u23F1</span><span class="tm">' + fmtMs(left) + '</span>' +
+      '<button class="tm-b" data-act="timer" aria-label="Start or pause the clock">' + (t.end ? '\u23F8' : '\u25B6') + '</button>' +
+      '<button class="tm-b" data-act="timer-reset" aria-label="Reset the clock">\u21BA</button></span>';
+  }
+  setInterval(function () {
+    $$('.timer[data-timer]').forEach(function (el) {
+      var t = TIMERS[el.getAttribute('data-timer')];
+      if (!t || !t.end) return;
+      var left = t.end - Date.now();
+      $('.tm', el).textContent = fmtMs(left);
+      if (left <= 0) {
+        t.left = 0; t.end = null;
+        el.classList.remove('run'); el.classList.add('up');
+        $('[data-act="timer"]', el).textContent = '\u25B6';
+      }
+    });
+  }, 500);
+
+  var RATE = [['solo', '\u2705 Solved on my own'], ['hints', '\u{1F4A1} Needed hints'], ['revisit', '\u{1F501} Revisit']];
+  function rateHTML(k) {
+    if (PRINT) return '';
+    var v = S.rounds[k];
+    return '<div class="rate" data-rate="' + esc(k) + '"><span>How did it go?</span>' + RATE.map(function (r) {
+      return '<button class="btn sm' + (v === r[0] ? ' on' : '') + '" data-act="rate" data-v="' + r[0] + '" aria-pressed="' + (v === r[0]) + '">' + r[1] + '</button>';
+    }).join('') + '</div>';
+  }
+  function hintsHTML(hints) {
+    if (PRINT) return '<div class="hints open"><b>\u{1F4A1} Hints</b><ol>' + hints.map(function (x) { return '<li>' + inl(x) + '</li>'; }).join('') + '</ol></div>';
+    return '<div class="hints"><ol>' + hints.map(function (x) { return '<li hidden>' + inl(x) + '</li>'; }).join('') + '</ol>' +
+      '<button class="btn sm" data-act="hint">\u{1F4A1} Show hint 1 of ' + hints.length + '</button></div>';
+  }
+  function followHTML(list) {
+    return '<div class="fups"><div class="fups-h">\u{1F501} Follow-up questions the interviewer will ask</div>' + list.map(function (x) {
+      return PRINT ? '<div class="fu open"><p class="fu-q">' + inl(x.q) + '</p><div class="fu-a">' + MD.blocks(x.a) + '</div></div>' :
+        '<details class="fu"><summary>' + inl(x.q) + '</summary><div class="fu-a">' + MD.blocks(x.a) + '</div></details>';
+    }).join('') + '</div>';
+  }
+  function rubricHTML(list) {
+    return '<div class="rubric"><div class="rubric-h">\u{1F4CB} What the interviewer is scoring</div>' + MD.points(list) + '</div>';
+  }
+  function approachesTable(a) {
+    return '<div class="apx">' + tableHTML({ head: ['Approach', 'Idea', 'Time', 'Space'], rows: a.map(function (x) {
+      return ['**' + x.name + '**', x.idea, '`' + x.time + '`', '`' + x.space + '`'];
+    }) }) + '</div>';
+  }
+
+  function codingHTML(e) {
+    var s = e.slide, k = rkey(e);
+    var langs = [].concat(s.code || []).map(function (c) { return c.lang; });
+    var h = '<div class="round-h">' + diffBadge(s.difficulty) + (s.lc ? '<span class="chip lc" title="Same problem as LeetCode #' + s.lc + '">LeetCode ' + s.lc + '</span>' : '') +
+      (s.pattern || []).map(function (p) { return '<a class="chip pat" href="#/interview/patterns/' + esc(p) + '">' + esc(patLabel(p)) + '</a>'; }).join('') +
+      timerHTML(k, s.minutes) + '</div>';
+    h += '<div class="prob">' + MD.blocks(s.problem) + '</div>';
+    if (s.examples) {
+      h += '<div class="exs">' + s.examples.map(function (x, i) {
+        return '<div class="ex"><div class="ex-h">Example ' + (i + 1) + '</div><div class="ex-r"><b>Input</b><pre>' + esc(x.in) + '</pre></div>' +
+          '<div class="ex-r"><b>Output</b><pre>' + esc(x.out) + '</pre></div>' + (x.why ? '<p class="ex-why">' + inl(x.why) + '</p>' : '') + '</div>';
+      }).join('') + '</div>';
+    }
+    if (s.constraints) h += '<div class="cons"><b>Constraints</b>' + MD.points(s.constraints) + '</div>';
+    if (!PRINT) {
+      h += '<label class="scratch"><span>\u270D\uFE0F Think out loud first \u2014 clarifying questions, brute force, a better idea, complexity, edge cases (saved in this browser)</span>' +
+        '<textarea data-scratch="' + esc(k) + '" rows="4" spellcheck="false" placeholder="Clarify: \u2026&#10;Brute force: \u2026 O(?)&#10;Better: \u2026&#10;Edge cases: \u2026">' + esc(S.scratch[k] || '') + '</textarea></label>';
+    }
+    if (s.hints) h += hintsHTML(s.hints);
+    if (s.approaches) h += revealHTML('Approaches &amp; complexity', approachesTable(s.approaches));
+    if (s.code) {
+      h += revealHTML('Reference solution (' + (langs.indexOf('sql') >= 0 ? 'SQL' : 'Java') + ', verified by running it)', codeHTML(s.code) +
+        (s.pitfalls ? '<div class="pit"><div class="pit-h">\u{1F41E} Edge cases &amp; pitfalls</div>' + MD.points(s.pitfalls) + '</div>' : ''));
+    }
+    if (s.followUps) h += followHTML(s.followUps);
+    if (s.rubric) h += rubricHTML(s.rubric);
+    return h + rateHTML(k);
+  }
+
+  function designHTML(e) {
+    var s = e.slide, k = rkey(e);
+    var h = '<div class="round-h"><span class="diff d-' + esc(String(s.kind || 'HLD').toLowerCase()) + '">' + esc(s.kind === 'LLD' ? 'Low-level design' : 'High-level design') + '</span>' +
+      diffBadge(s.difficulty) + timerHTML(k, s.minutes) + '</div>';
+    h += '<blockquote class="prompt"><b>Interviewer:</b> ' + inl(s.prompt) + '</blockquote>';
+    h += '<ol class="stages">' + s.stages.map(function (st, i) {
+      var body = (st.points ? MD.points(st.points) : '') + (st.diagram ? DG.render(st.diagram) : '') + (st.table ? tableHTML(st.table) : '') +
+        (st.code ? codeHTML(st.code) : '') + (st.callout ? [].concat(st.callout).map(calloutHTML).join('') : '');
+      return '<li class="stg' + (PRINT ? ' open' : '') + '"><div class="stg-h"><span class="stg-n">' + (i + 1) + '</span><div class="stg-t"><b>' + inl(st.t) + '</b>' +
+        (st.ask ? '<p class="stg-ask">' + inl(st.ask) + '</p>' : '') + '</div>' +
+        (PRINT ? '' : '<button class="btn sm" data-act="stage" aria-expanded="false">Reveal</button>') + '</div>' +
+        '<div class="stg-b"' + (PRINT ? '' : ' hidden') + '>' + body + '</div></li>';
+    }).join('') + '</ol>';
+    if (!PRINT) h += '<div class="cta sm"><button class="btn sm" data-act="stage-all">\u{1F441}\uFE0F Reveal every stage</button></div>';
+    if (s.followUps) h += followHTML(s.followUps);
+    if (s.rubric) h += rubricHTML(s.rubric);
+    return h + rateHTML(k);
+  }
+
+  function qaSummary(c, n, total) {
+    return n ? '\u2713 ' + c[2] + ' nailed \u00B7 ~ ' + c[1] + ' partly \u00B7 \u2717 ' + c[0] + ' missed \u00B7 ' + (total - n) + ' to go' :
+      total + ' questions \u2014 answer out loud first, then reveal the model answer and rate yourself';
+  }
+  function qaSummaryOf(items) {
+    var c = [0, 0, 0], n = 0;
+    items.forEach(function (it) { var r = (S.iq[it.k] || {})[it.i]; if (r != null) { c[r]++; n++; } });
+    return qaSummary(c, n, items.length);
+  }
+  function refreshQa(scope) {
+    var el = scope && $('.qa-sum', scope);
+    if (!el) return;
+    var c = [0, 0, 0], n = 0, cards = $$('.qa-c', scope);
+    if (!cards.length) { el.textContent = ''; return; }
+    cards.forEach(function (cd) { var r = cd.getAttribute('data-r'); if (r !== 'u') { c[+r]++; n++; } });
+    el.textContent = qaSummary(c, n, cards.length);
+  }
+  function qaRate(r) {
+    return '<span class="qa-rate" role="group" aria-label="Rate your answer">' + [[2, '\u2713 Nailed it'], [1, '~ Partly'], [0, '\u2717 Missed']].map(function (b) {
+      return '<button class="rt rt' + b[0] + (r === b[0] ? ' on' : '') + '" data-act="qa-rate" data-v="' + b[0] + '" aria-pressed="' + (r === b[0]) + '">' + b[1] + '</button>';
+    }).join('') + '</span>';
+  }
+  function qaCard(it, n) {
+    var x = it.x, r = (S.iq[it.k] || {})[it.i];
+    var ans = MD.blocks(x.a) + (x.code ? codeHTML(x.code) : '') +
+      (x.follow ? '<div class="qa-fu"><b>\u{1F501} Likely follow-ups</b>' + MD.points(x.follow) + '</div>' : '') +
+      (x.flags ? '<div class="qa-flag"><b>\u{1F6A9} Red flags \u2014 answers that sink candidates</b>' + MD.points(x.flags) + '</div>' : '');
+    return '<article class="qa-c fi" data-l="' + (x.level || 1) + '" data-m="' + it.e.module.no + '" data-r="' + (r == null ? 'u' : r) + '" data-k="' + esc(it.k) + '" data-i="' + it.i + '">' +
+      '<div class="qa-q"><span class="qa-n">Q' + (n + 1) + '</span>' + lvlBadge(x.level) + '<span class="qa-t">' + inl(x.q) + '</span></div>' +
+      (it.where ? '<div class="qa-w">' + it.where + '</div>' : '') +
+      (PRINT ? '<div class="qa-a">' + ans + '</div>' :
+        '<div class="qa-ctl"><button class="btn sm" data-act="qa-toggle" aria-expanded="false">\u{1F441}\uFE0F Model answer</button>' + qaRate(r) + '</div>' +
+        '<div class="qa-a" hidden>' + ans + '</div>') + '</article>';
+  }
+  function segHTML(field, opts) {
+    return '<span class="seg" role="group">' + opts.map(function (o, i) {
+      return '<button class="' + (i ? '' : 'on') + '" data-act="flt" data-f="' + field + '" data-v="' + esc(o[0]) + '">' + o[1] + '</button>';
+    }).join('') + '</span>';
+  }
+  function interviewHTML(e) {
+    var s = e.slide, k = rkey(e);
+    var items = s.qa.map(function (x, i) { return { x: x, k: k, i: i, e: e }; });
+    var lv = [1, 2, 3].filter(function (l) { return items.some(function (it) { return (it.x.level || 1) === l; }); });
+    var bar = PRINT ? '' : '<div class="qa-bar"><span class="qa-sum">' + qaSummaryOf(items) + '</span>' +
+      segHTML('l', [['', 'All levels']].concat(lv.map(function (l) { return [String(l), esc(LV[l])]; }))) +
+      '<button class="btn sm ghost" data-act="qa-all">\u{1F441}\uFE0F Reveal all</button></div>';
+    return bar + '<div class="qa-list">' + items.map(qaCard).join('') + '</div>';
+  }
+  function applyFilters(scope) {
+    if (!scope) return;
+    var f = {};
+    $$('.seg', scope).forEach(function (seg) { var on = $('button.on', seg); if (on) f[on.getAttribute('data-f')] = on.getAttribute('data-v'); });
+    $$('select[data-f]', scope).forEach(function (sel) { f[sel.getAttribute('data-f')] = sel.value; });
+    var q = $('.bank-q', scope), terms = q ? q.value.toLowerCase().split(/\s+/).filter(Boolean) : [];
+    var items = $$('.fi', scope), shown = 0;
+    items.forEach(function (el) {
+      var ok = Object.keys(f).every(function (key) {
+        var v = f[key];
+        return !v || (' ' + (el.getAttribute('data-' + key) || '') + ' ').indexOf(' ' + v + ' ') >= 0;
+      });
+      if (ok && terms.length) {
+        var txt = el.textContent.toLowerCase();
+        ok = terms.every(function (t) { return txt.indexOf(t) >= 0; });
+      }
+      el.hidden = !ok;
+      if (ok) shown++;
+    });
+    var n = $('.flt-n', scope);
+    if (n) n.textContent = shown + ' of ' + items.length + ' shown';
+  }
+
+  function prepBand(t) {
+    if (!t.coding && !t.qa) return '';
+    return '<section class="sec prep-band"><div class="prep-in"><span class="eyebrow">FAANG-level interview track</span>' +
+      '<h2 class="sec-h">Train for the real loop, not just the syllabus</h2><p class="sec-p">' +
+      'Every session now ends with interview-grade material: deep dives into internals, a timed coding round (LeetCode Medium/Hard style, with reference solutions that are compiled and run by the test suite), ' +
+      'system-design rounds, 8\u201310 deep-dive questions with model answers, follow-ups and red flags, and harder quiz questions \u2014 graded SDE-1 / SDE-2 / Senior.</p>' +
+      '<div class="stats">' + [[t.coding, 'coding rounds'], [t.codingHard, 'of them Hard'], [t.design, 'design rounds'], [t.qa, 'interview Q&As'], [t.hardQ, 'hard quiz Qs'], [t.deep, 'deep dives']].map(function (x) {
+        return '<div><b>' + x[0] + '</b><span>' + x[1] + '</span></div>';
+      }).join('') + '</div><div class="cta"><a class="btn primary" href="#/interview">\u{1F3AF} Open the interview track</a>' +
+      '<a class="btn" href="#/interview/mock">\u23F1\uFE0F Start a mock interview</a><a class="btn" href="#/interview/coding">\u2328\uFE0F All coding rounds</a></div></div></section>';
+  }
+
+
   /* ------------------------------------------------------------ slides */
   function contentSlide(e) {
     var s = e.slide, T = C.types[s.type] || { label: s.type, icon: '' };
@@ -219,6 +448,9 @@
       '<span class="sl-ref">Session ' + e.session.no + ' \u00B7 ' + esc(e.session.short || e.session.title) + ' \u00B7 ' + e.idx + '/' + e.session.slides.length + '</span></div>';
     h += '<h2 class="sl-title">' + inl(s.title) + '</h2>';
     if (s.lead) h += '<p class="sl-lead">' + inl(s.lead) + '</p>';
+    if (s.type === 'coding') return h + codingHTML(e);
+    if (s.type === 'design') return h + designHTML(e);
+    if (s.type === 'interview') return h + '<div class="qa-scope">' + interviewHTML(e) + '</div>';
     var main = s.points ? MD.points(s.points) : '';
     var visual = (s.diagram ? DG.render(s.diagram) : '') + (s.code ? codeHTML(s.code) : '');
     var split = main && visual && s.layout !== 'stack' &&
@@ -227,6 +459,7 @@
     if (s.table) h += tableHTML(s.table);
     if (s.callout) h += [].concat(s.callout).map(calloutHTML).join('');
     if (s.steps) h += labHTML(s.steps, e.key);
+    if (s.stretch) h += stretchHTML(s.stretch);
     if (s.quiz) h += quizHTML(s.quiz, e.key);
     if (s.cards) h += cardsHTML(s.cards);
     return h;
@@ -313,7 +546,7 @@
     return '<header class="site-h"><a class="brand" href="#/"><span class="logo" aria-hidden="true">{J}</span><span class="brand-t"><b>Java Backend</b><small>Interactive Course Notes</small></span></a>' +
       '<nav class="site-nav">' + L('#/', 'Home', 'home') + L('#/syllabus', 'Syllabus map', 'syllabus') +
       C.modules.map(function (m) { return L('#/m/' + m.no, 'Module ' + m.no, 'm' + m.no); }).join('') +
-      L('#/projects', 'Projects', 'projects') + '</nav>' + tools() + '</header>';
+      L('#/projects', 'Projects', 'projects') + L('#/interview', '\u{1F3AF} Interview prep', 'interview') + '</nav>' + tools() + '</header>';
   }
   function tools() {
     return '<div class="tools"><button class="icon-btn" data-act="search" title="Search all notes (Ctrl+K or /)"><span aria-hidden="true">\u{1F50D}</span><span class="kbd-h">Search</span></button>' +
@@ -325,7 +558,7 @@
     return '<footer class="site-f"><p><b>Syllabus source:</b> ' + esc(C.brochure.provider) + ' \u2014 \u201C' + esc(C.brochure.title) +
       '\u201D brochure (24 sessions, 4 modules, 3 projects). This site is an independent study companion built strictly on that syllabus; it is not an official GeeksforGeeks or IBM publication.</p>' +
       '<p><b>Versions used in code:</b> ' + esc([st.java, st.boot, st.cloud, st.db, st.redis, st.kafka].join(' \u00B7 ')) + ' \u2014 verified ' + esc(st.verified) + '.</p>' +
-      '<p>Your progress (viewed slides, quiz answers, lab checklists) is stored only in this browser. <button class="link" data-act="reset-progress">Reset progress</button></p></footer>';
+      '<p>Your progress (viewed slides, quiz answers, lab checklists, interview self-ratings and notes) is stored only in this browser. <button class="link" data-act="reset-progress">Reset progress</button></p></footer>';
   }
   function view(html, active, title) {
     cur = null;
@@ -341,7 +574,7 @@
     var h = '<section class="hero"><div class="hero-l"><span class="pill">' + esc(B.provider) + ' \u00B7 ' + esc(B.title) + '</span>' +
       '<h1>Become an industry-ready <em>Java Backend Developer</em> from the ground up.</h1><p class="hero-p">' + esc(B.summary) + '</p>' +
       '<p class="hero-sub">This site turns the official 24-session syllabus into <b>interactive slide decks with detailed notes</b> \u2014 every session pairs <b>theory</b> (concepts, diagrams, internals) with <b>practice</b> (working code, labs, quizzes).</p>' +
-      '<div class="cta"><a class="btn primary" href="#/m/1">\u25B6 Start Module 1</a><a class="btn" href="#/syllabus">\u{1F4CB} Syllabus coverage map</a><a class="btn" href="#/projects">\u{1F3D7}\uFE0F Projects</a></div>' +
+      '<div class="cta"><a class="btn primary" href="#/m/1">\u25B6 Start Module 1</a><a class="btn" href="#/interview">\u{1F3AF} FAANG interview track</a><a class="btn" href="#/syllabus">\u{1F4CB} Syllabus coverage map</a></div>' +
       '<div class="stats">' + [[t.sessions, 'sessions'], [4, 'modules'], [t.slides, 'slides'], [t.code, 'code examples'], [t.diagrams, 'diagrams'], [t.quizQ, 'quiz questions']].map(function (x) {
         return '<div><b>' + x[0] + '</b><span>' + x[1] + '</span></div>';
       }).join('') + '</div></div>' +
@@ -349,10 +582,11 @@
       '<pre><code class="hljs">' + highlight('@RestController\n@RequestMapping("/api/v1/expenses")\n@RequiredArgsConstructor\npublic class ExpenseController {\n\n  private final ExpenseService service;\n\n  @PostMapping\n  public ResponseEntity<ExpenseDto> create(\n      @Valid @RequestBody CreateExpense req) {\n    ExpenseDto saved = service.create(req);\n    return ResponseEntity\n        .created(URI.create("/api/v1/expenses/" + saved.id()))\n        .body(saved);\n  }\n}', 'java') +
       '</code></pre><div class="mock-f"><span class="badge t-practical">\u{1F4BB} Practical</span><span class="badge t-theory">\u{1F4D8} Theory</span><span class="badge t-quiz">\u2753 Quiz</span></div></div></div></section>';
 
+    h += prepBand(t);
     h += '<section class="sec"><h2 class="sec-h">How to use these notes</h2><div class="how">' + [
       ['\u{1F5BC}\uFE0F', 'Slides + detailed notes', 'Each module is a PowerPoint-style deck. The panel under every slide holds the full explanation you would hear in class.'],
       ['\u2696\uFE0F', 'Theory \u2194 practical', 'Concept slides (\u{1F4D8}) explain the why and internals; practical slides (\u{1F4BB}) show working code with expected output.'],
-      ['\u{1F9EA}', 'Labs & quizzes', 'Every session ends with a hands-on lab checklist and a quiz with explanations, so you can practise and self-check.'],
+      ['\u{1F9EA}', 'Labs, quizzes & interview rounds', 'Every session ends with a lab (plus stretch goals), a timed coding round, deep-dive interview questions with model answers and a quiz with explanations.'],
       ['\u{1F4C8}', 'Progress, print & PPTX', 'Progress is saved locally. Print any module to PDF, or download it as a .pptx with speaker notes.']
     ].map(function (x) { return '<div class="how-c"><div class="how-i">' + x[0] + '</div><b>' + x[1] + '</b><p>' + x[2] + '</p></div>'; }).join('') +
       '</div><p class="hint center">Shortcuts: <kbd>\u2192</kbd> next \u00B7 <kbd>\u2190</kbd> previous \u00B7 <kbd>N</kbd> notes \u00B7 <kbd>O</kbd> overview \u00B7 <kbd>F</kbd> present \u00B7 <kbd>/</kbd> search \u00B7 <kbd>T</kbd> theme</p></section>';
@@ -402,13 +636,20 @@
       var m = d.module;
       h += '<section class="sec syl" style="--mod:' + m.color + '"><h2 class="syl-h"><span class="mod-n sm">' + m.no + '</span>' + esc(m.title) +
         ' <small>Sessions ' + m.sessions[0] + '\u2013' + m.sessions[1] + '</small></h2><blockquote class="brochure">' + esc(m.blurb) + '</blockquote>';
-      h += '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>Brochure topic (verbatim)</th><th>Taught in</th><th>\u{1F4D8} Theory</th><th>\u{1F4BB} Practical</th><th>\u{1F9EA} Lab</th><th>\u2753 Quiz Qs</th></tr></thead><tbody>' +
+      h += '<div class="tbl-wrap"><table class="tbl"><thead><tr><th>#</th><th>Brochure topic (verbatim)</th><th>Taught in</th><th>\u{1F4D8} Theory</th><th>\u{1F4BB} Practical</th><th>\u{1F9EA} Lab</th><th>\u2753 Quiz Qs</th><th>\u2328\uFE0F Rounds</th><th>\u{1F3AF} Q&amp;As</th></tr></thead><tbody>' +
         m.topics.map(function (tp, i) {
-          var ss = sessionsCovering(m, i), c = { theory: 0, practical: 0, lab: 0, q: 0 };
-          ss.forEach(function (s) { s.slides.forEach(function (sl) { if (c[sl.type] != null) c[sl.type]++; if (sl.quiz) c.q += sl.quiz.length; }); });
+          var ss = sessionsCovering(m, i), c = { theory: 0, practical: 0, lab: 0, q: 0, r: 0, qa: 0 };
+          ss.forEach(function (s) {
+            s.slides.forEach(function (sl) {
+              if (c[sl.type] != null) c[sl.type]++;
+              if (sl.quiz) c.q += sl.quiz.length;
+              if (sl.type === 'coding' || sl.type === 'design') c.r++;
+              if (sl.qa) c.qa += sl.qa.length;
+            });
+          });
           return '<tr class="' + (ss.length ? '' : 'missing') + '"><td>' + (i + 1) + '</td><td>' + esc(tp) + '</td><td>' +
             (ss.length ? ss.map(function (s) { return '<a class="pill-link" href="#/s/' + s.no + '">S' + s.no + '</a>'; }).join(' ') : '<em>pending</em>') +
-            '</td><td>' + c.theory + '</td><td>' + c.practical + '</td><td>' + c.lab + '</td><td>' + c.q + '</td></tr>';
+            '</td><td>' + c.theory + '</td><td>' + c.practical + '</td><td>' + c.lab + '</td><td>' + c.q + '</td><td>' + c.r + '</td><td>' + c.qa + '</td></tr>';
         }).join('') + '</tbody></table></div>';
       if (m.project) h += calloutHTML({ kind: 'best', title: 'Project (brochure)', text: m.project });
       h += '<div class="plan">' + d.sessions.map(function (s) {
@@ -438,6 +679,212 @@
     });
     return h;
   }
+
+  /* ------------------------------------------------------------ interview hub */
+  var HUB = [['', '\u{1F3AF} Overview'], ['coding', '\u2328\uFE0F Coding rounds'], ['design', '\u{1F3DB}\uFE0F System design'], ['bank', '\u{1F5C3}\uFE0F Q&amp;A bank'],
+    ['mock', '\u23F1\uFE0F Mock interview'], ['patterns', '\u{1F9E9} Patterns'], ['behavioral', '\u{1F5E3}\uFE0F Behavioral']];
+  var STATUS = { todo: ['\u25CB', 'To do'], solo: ['\u2705', 'Solved'], hints: ['\u{1F4A1}', 'With hints'], revisit: ['\u{1F501}', 'Revisit'] };
+  function prepEntries(type) {
+    var r = [];
+    DECKS.forEach(function (d) { d.content.forEach(function (e) { if (e.slide.type === type) r.push(e); }); });
+    return r;
+  }
+  function allQa() {
+    var r = [];
+    prepEntries('interview').forEach(function (e) {
+      var k = rkey(e);
+      e.slide.qa.forEach(function (x, i) { r.push({ x: x, k: k, i: i, e: e }); });
+    });
+    return r;
+  }
+  function whereLink(e) {
+    return '<a class="pill-link" style="--mod:' + e.module.color + '" href="' + e.href + '" title="' + esc(e.session.title) + '">S' + e.session.no + '</a>';
+  }
+  function statusOf(e) { return S.rounds[rkey(e)] || 'todo'; }
+  function track() { return C.track || {}; }
+
+  function interviewPage(tab) {
+    var T = track();
+    var h = '<section class="sec hub-top"><span class="eyebrow">FAANG-level interview track</span><h1 class="sec-h">Crack the backend loop: coding, design &amp; deep-dive rounds</h1>' +
+      '<p class="sec-p">' + inl(T.intro || '') + '</p><nav class="hub-tabs" aria-label="Interview track sections">' + HUB.map(function (x) {
+        return '<a href="#/interview' + (x[0] ? '/' + x[0] : '') + '" class="' + (x[0] === tab ? 'on' : '') + '">' + x[1] + '</a>';
+      }).join('') + '</nav></section>';
+    switch (tab) {
+      case 'coding': return h + hubCoding();
+      case 'design': return h + hubDesign();
+      case 'bank': return h + hubBank();
+      case 'mock': return h + hubMock();
+      case 'patterns': return h + hubPatterns();
+      case 'behavioral': return h + hubBehavioral();
+      default: return h + hubOverview();
+    }
+  }
+
+  function hubOverview() {
+    var T = track(), t = totals(), cod = prepEntries('coding'), des = prepEntries('design'), qa = allQa();
+    var rounds = cod.concat(des);
+    var solved = rounds.filter(function (e) { var v = S.rounds[rkey(e)]; return v === 'solo' || v === 'hints'; }).length;
+    var nailed = qa.filter(function (it) { return (S.iq[it.k] || {})[it.i] === 2; }).length;
+    var h = '<section class="sec"><div class="stats wide">' + [
+      [t.coding, 'coding rounds \u00B7 ' + t.codingHard + ' Hard'], [t.design, 'system-design rounds'], [t.qa, 'interview Q&As with model answers'],
+      [t.hardQ, 'interview-level quiz questions'], [t.deep, 'deep-dive lessons'], [solved + ' / ' + rounds.length, 'rounds you have solved'], [nailed + ' / ' + qa.length, 'answers you nailed']
+    ].map(function (x) { return '<div><b>' + x[0] + '</b><span>' + esc(x[1]) + '</span></div>'; }).join('') + '</div></section>';
+    if (T.loop) {
+      h += '<section class="sec"><h2 class="sec-h">The loop you are preparing for</h2><p class="sec-p">' + inl(T.loopIntro || '') + '</p><div class="loop">' + T.loop.map(function (r) {
+        return '<article class="loop-c"><div class="loop-i" aria-hidden="true">' + r.icon + '</div><div><span class="loop-t">' + esc(r.time) + '</span><h3>' + esc(r.name) + '</h3>' +
+          MD.points(r.what) + (r.tab != null ? '<a class="btn sm" href="#/interview' + (r.tab ? '/' + r.tab : '') + '">Practise \u2192</a>' : '') + '</div></article>';
+      }).join('') + '</div></section>';
+    }
+    if (T.method) {
+      h += '<section class="sec"><h2 class="sec-h">How to run each round</h2><div class="method">' + T.method.map(function (m) {
+        return '<article class="method-c"><h3>' + m.icon + ' ' + esc(m.name) + '</h3><ol>' + m.steps.map(function (x) { return '<li>' + inl(x) + '</li>'; }).join('') + '</ol></article>';
+      }).join('') + '</div></section>';
+    }
+    if (T.levels) h += '<section class="sec"><h2 class="sec-h">What changes by level</h2><p class="sec-p">' + inl(T.levels.intro || '') + '</p>' + tableHTML(T.levels) + '</section>';
+    if (T.plan) h += '<section class="sec"><h2 class="sec-h">' + esc(T.plan.title || 'Study plan') + '</h2><p class="sec-p">' + inl(T.plan.intro || '') + '</p>' + tableHTML(T.plan) + '</section>';
+    var rv = rounds.filter(function (e) { return S.rounds[rkey(e)] === 'revisit'; });
+    var miss = qa.filter(function (it) { return (S.iq[it.k] || {})[it.i] === 0; });
+    h += '<section class="sec"><h2 class="sec-h">Your revisit list</h2>' + (rv.length || miss.length ? '<ul class="revisit">' +
+      rv.map(function (e) { return '<li>' + whereLink(e) + ' <a href="' + e.href + '">' + inl(e.slide.title) + '</a> <small>' + C.types[e.slide.type].label + '</small></li>'; }).join('') +
+      miss.map(function (it) { return '<li>' + whereLink(it.e) + ' <a href="' + it.e.href + '">' + inl(it.x.q) + '</a> <small>Q&amp;A</small></li>'; }).join('') + '</ul>' :
+      '<p class="hint">Rate rounds \u{1F501} <b>Revisit</b> and answers \u2717 <b>Missed</b> while you practise \u2014 they collect here so you can drill your weak spots.</p>') + '</section>';
+    return h;
+  }
+
+  function hubCoding() {
+    var list = prepEntries('coding'), pats = {};
+    list.forEach(function (e) { (e.slide.pattern || []).forEach(function (p) { pats[p] = 1; }); });
+    var h = '<section class="sec flt-scope"><div class="flt">' + segHTML('d', [['', 'All'], ['Medium', 'Medium'], ['Hard', 'Hard']]) +
+      segHTML('s', [['', 'Any status'], ['todo', 'To do'], ['done', 'Solved'], ['revisit', 'Revisit']]) +
+      '<select data-f="p" aria-label="Filter by pattern"><option value="">All patterns</option>' + Object.keys(pats).sort(function (a, b) {
+        return patLabel(a).localeCompare(patLabel(b));
+      }).map(function (p) { return '<option value="' + esc(p) + '">' + esc(patLabel(p)) + '</option>'; }).join('') + '</select><span class="flt-n"></span></div>';
+    h += '<div class="tbl-wrap"><table class="tbl rounds"><thead><tr><th>#</th><th>Problem</th><th>Level</th><th>Patterns</th><th>Session</th><th>Clock</th><th>Status</th></tr></thead><tbody>' +
+      list.map(function (e, i) {
+        var s = e.slide, st = statusOf(e);
+        return '<tr class="fi" data-d="' + esc(s.difficulty) + '" data-s="' + (st === 'solo' || st === 'hints' ? 'done' : st) + '" data-p="' + esc((s.pattern || []).join(' ')) + '">' +
+          '<td>' + (i + 1) + '</td><td><a href="' + e.href + '"><b>' + inl(s.title) + '</b></a>' + (s.lc ? ' <small class="lc">LC ' + s.lc + '</small>' : '') + '</td>' +
+          '<td>' + diffBadge(s.difficulty) + '</td><td>' + (s.pattern || []).map(function (p) { return '<span class="chip">' + esc(patLabel(p)) + '</span>'; }).join(' ') + '</td>' +
+          '<td>' + whereLink(e) + '</td><td>' + (s.minutes || 45) + '\u2032</td><td>' + STATUS[st][0] + ' ' + STATUS[st][1] + '</td></tr>';
+      }).join('') + '</tbody></table></div></section>';
+    return h;
+  }
+
+  function hubDesign() {
+    return '<section class="sec"><div class="dcards">' + prepEntries('design').map(function (e) {
+      var s = e.slide, st = statusOf(e);
+      return '<a class="dcard" href="' + e.href + '" style="--mod:' + e.module.color + '"><span class="dcard-m"><span class="diff d-' + esc(String(s.kind || 'HLD').toLowerCase()) + '">' +
+        esc(s.kind || 'HLD') + '</span>' + diffBadge(s.difficulty) + '<span class="chip">\u23F1 ' + (s.minutes || 45) + ' min</span><span class="chip">S' + e.session.no + '</span></span>' +
+        '<b>' + inl(s.title) + '</b><span class="dcard-p">' + inl(s.prompt) + '</span><span class="dcard-s">' + STATUS[st][0] + ' ' + STATUS[st][1] + '</span></a>';
+    }).join('') + '</div></section>';
+  }
+
+  function hubBank() {
+    var qa = allQa();
+    return '<section class="sec qa-scope bank"><div class="flt"><input type="search" class="bank-q" placeholder="Search ' + qa.length + ' questions and answers\u2026 e.g. volatile, N+1, idempotency" aria-label="Search questions">' +
+      segHTML('l', [['', 'All levels'], ['1', LV[1]], ['2', LV[2]], ['3', LV[3]]]) +
+      segHTML('m', [['', 'All modules']].concat(C.modules.map(function (m) { return [String(m.no), 'M' + m.no]; }))) +
+      segHTML('r', [['', 'Any rating'], ['u', 'Unrated'], ['0', '\u2717 Missed'], ['1', '~ Partly'], ['2', '\u2713 Nailed']]) +
+      '<button class="btn sm ghost" data-act="qa-all">\u{1F441}\uFE0F Reveal all</button><span class="flt-n"></span></div>' +
+      '<p class="qa-sum hint">' + qaSummaryOf(qa) + '</p><div class="qa-list">' + qa.map(function (it, n) {
+        it.where = whereLink(it.e) + ' <span>' + esc(it.e.session.short || it.e.session.title) + '</span>';
+        return qaCard(it, n);
+      }).join('') + '</div></section>';
+  }
+
+  function shuffle(a) {
+    for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(Math.random() * (i + 1)), x = a[i]; a[i] = a[j]; a[j] = x; }
+    return a;
+  }
+  /* Random selection that favours what you have not solved yet (then revisit, then everything else). */
+  function pickMock(f) {
+    var items = [], used = {};
+    var prioR = function (e) { var v = S.rounds[rkey(e)]; return v === 'revisit' ? 0 : !v ? 1 : v === 'hints' ? 2 : 3; };
+    var prioQ = function (it) { var r = (S.iq[it.k] || {})[it.i]; return r === 0 ? 0 : r == null ? 1 : r === 1 ? 2 : 3; };
+    f.parts.forEach(function (p) {
+      if (p.type === 'coding' || p.type === 'design') {
+        var pool = prepEntries(p.type).filter(function (e) {
+          return (!p.difficulty || e.slide.difficulty === p.difficulty) && (!p.kind || e.slide.kind === p.kind) &&
+            (!p.pattern || (e.slide.pattern || []).indexOf(p.pattern) >= 0) && !used[e.key];
+        });
+        shuffle(pool).sort(function (a, b) { return prioR(a) - prioR(b); });
+        pool.slice(0, p.count).forEach(function (e) { used[e.key] = 1; items.push({ t: p.type, key: e.key }); });
+      } else if (p.type === 'qa') {
+        var qs = allQa().filter(function (it) { return (it.x.level || 1) >= (p.minLevel || 1) && !used[it.k + '/' + it.i]; });
+        shuffle(qs).sort(function (a, b) { return prioQ(a) - prioQ(b); });
+        qs.slice(0, p.count).forEach(function (it) { used[it.k + '/' + it.i] = 1; items.push({ t: 'qa', key: it.e.key, i: it.i }); });
+      } else if (p.type === 'behavioral') {
+        var bs = (track().behavioral || {}).prompts || [];
+        shuffle(bs.map(function (_, i) { return i; })).slice(0, p.count).forEach(function (i) { items.push({ t: 'beh', i: i }); });
+      }
+    });
+    return { fmt: f.id, at: Date.now(), items: items };
+  }
+  function behCard(b, label) {
+    return '<article class="beh-c"><div class="qa-q"><span class="qa-n">' + label + '</span>' + (b.theme ? '<span class="lvl l2">' + esc(b.theme) + '</span> ' : '') +
+      '<span class="qa-t">' + inl(b.q) + '</span></div>' + revealHTML('What they are probing for', MD.points(b.probe || []) +
+      (b.story ? '<p class="beh-s">\u{1F4A1} <b>Build your story from this course:</b> ' + inl(b.story) + '</p>' : '')) + '</article>';
+  }
+  function mockItemHTML(it, n) {
+    if (it.t === 'beh') {
+      var b = ((track().behavioral || {}).prompts || [])[it.i];
+      return b ? behCard(b, 'B') : '';
+    }
+    var hit = BYKEY[it.key];
+    if (!hit) return '<p class="hint">This item no longer exists \u2014 re-roll the mock.</p>';
+    var e = hit.entry, s = e.slide;
+    if (it.t === 'qa') {
+      var x = s.qa && s.qa[it.i];
+      return x ? qaCard({ x: x, k: rkey(e), i: it.i, e: e, where: whereLink(e) + ' <span>' + esc(e.session.short || '') + '</span>' }, n) : '';
+    }
+    return '<a class="mock-r" href="' + e.href + '"><span class="badge t-' + s.type + '">' + C.types[s.type].icon + ' ' + C.types[s.type].label + '</span>' +
+      (s.kind ? '<span class="diff d-' + esc(s.kind.toLowerCase()) + '">' + esc(s.kind) + '</span>' : '') + diffBadge(s.difficulty) +
+      '<b>' + inl(s.title) + '</b><span class="hint">Session ' + e.session.no + ' \u00B7 ' + (s.minutes || 45) + ' min \u2192 open the round</span></a>';
+  }
+  function hubMock() {
+    var T = track(), fm = T.mocks || [];
+    var h = '<section class="sec"><p class="sec-p">' + inl(T.mockIntro || 'Pick a format; the generator favours rounds you have not solved and answers you missed.') + '</p><div class="mocks">' +
+      fm.map(function (f) {
+        return '<article class="mock-c"><h3>' + esc(f.name) + '</h3><span class="chip">\u23F1 ' + f.minutes + ' min</span><p>' + inl(f.desc) + '</p>' +
+          '<button class="btn primary sm" data-act="mock-new" data-fmt="' + esc(f.id) + '">\u25B6 Generate</button></article>';
+      }).join('') + '</div></section>';
+    var M = S.mock, f = M && fm.filter(function (x) { return x.id === M.fmt; })[0];
+    if (M && f) {
+      h += '<section class="sec mock-run qa-scope"><div class="mock-h"><h2 class="sec-h">' + esc(f.name) + '</h2>' + timerHTML('mock:' + M.at, f.minutes) +
+        '<button class="btn sm" data-act="mock-new" data-fmt="' + esc(f.id) + '">\u{1F3B2} Re-roll</button><button class="btn sm ghost" data-act="mock-clear">\u2715 End mock</button></div>' +
+        (f.rules ? '<p class="hint">' + inl(f.rules) + '</p>' : '') + '<p class="qa-sum hint"></p>' +
+        '<ol class="mock-items">' + (function () {
+          var q = 0;
+          return M.items.map(function (it) { return '<li>' + mockItemHTML(it, it.t === 'qa' ? q++ : 0) + '</li>'; }).join('');
+        })() + '</ol></section>';
+    }
+    return h;
+  }
+
+  function hubPatterns() {
+    var T = track(), cod = prepEntries('coding');
+    return '<section class="sec"><p class="sec-p">' + inl(T.patternsIntro || '') + '</p><div class="pats">' + (T.patterns || []).map(function (p) {
+      var probs = cod.filter(function (e) { return (e.slide.pattern || []).indexOf(p.id) >= 0; });
+      return '<article class="pat-c" id="pat-' + esc(p.id) + '"><h3>' + esc(p.name) + '</h3><div class="pat-g"><div><b>Reach for it when</b>' + MD.points(p.signals) +
+        (p.complexity ? '<p class="pat-cx"><b>Typical cost:</b> ' + inl(p.complexity) + '</p>' : '') + (p.pitfalls ? '<b>Pitfalls</b>' + MD.points(p.pitfalls) : '') +
+        (probs.length ? '<b>Practise it in this course</b><ul class="pat-p">' + probs.map(function (e) {
+          return '<li>' + whereLink(e) + ' <a href="' + e.href + '">' + inl(e.slide.title) + '</a> ' + diffBadge(e.slide.difficulty) + '</li>';
+        }).join('') + '</ul>' : '') + '</div><div>' + (p.template ? codeHTML(p.template) : '') + '</div></div></article>';
+    }).join('') + '</div></section>';
+  }
+
+  function hubBehavioral() {
+    var B = track().behavioral || {};
+    var h = '<section class="sec"><p class="sec-p">' + inl(B.intro || '') + '</p><div class="method">' +
+      (B.star ? '<article class="method-c"><h3>\u2B50 Structure every story: STAR + L</h3><ol>' + B.star.map(function (x) { return '<li>' + inl(x) + '</li>'; }).join('') + '</ol></article>' : '') +
+      (B.tips ? '<article class="method-c"><h3>\u{1F4A1} What separates strong answers</h3>' + MD.points(B.tips) + '</article>' : '') + '</div></section>';
+    if (B.prompts) {
+      h += '<section class="sec"><h2 class="sec-h">Practice prompts</h2><div class="beh">' + B.prompts.map(function (b, i) { return behCard(b, 'B' + (i + 1)); }).join('') + '</div></section>';
+    }
+    if (B.ask) h += '<section class="sec"><h2 class="sec-h">Questions to ask your interviewer</h2>' + MD.points(B.ask) + '</section>';
+    return h;
+  }
+
 
   function notFound() {
     return '<section class="sec center"><h1 class="sec-h">Page not found</h1><p class="sec-p">That slide or page does not exist (yet).</p><a class="btn primary" href="#/">\u2190 Home</a></section>';
@@ -646,10 +1093,16 @@
           s.table ? s.table.rows.map(function (r) { return r.join(' '); }) : [],
           [].concat(s.callout || []).map(function (c) { return c.text; }), s.steps || [],
           (s.quiz || []).map(function (q) { return q.q + ' ' + q.options.join(' '); }),
-          (s.cards || []).map(function (c) { return c.join(' '); })).join(' \u00B7 ');
+          (s.cards || []).map(function (c) { return c.join(' '); }),
+          [].concat(s.problem || []), s.hints || [], s.stretch || [], s.prompt || '',
+          (s.pattern || []).map(patLabel),
+          (s.approaches || []).map(function (a) { return a.name + ' ' + a.idea; }),
+          (s.followUps || []).map(function (f) { return f.q + ' ' + [].concat(f.a).join(' '); }),
+          (s.stages || []).map(function (st) { return st.t + ' ' + (st.ask || '') + ' ' + flat(st.points).join(' '); }),
+          (s.qa || []).map(function (x) { return x.q + ' ' + [].concat(x.a).join(' ') + ' ' + (x.follow || []).join(' '); })).join(' \u00B7 ');
         var raw = MD.strip(body);
         IDX.push({ e: e, title: MD.strip(s.title), t: MD.strip(s.title).toLowerCase(), b: raw.toLowerCase(), raw: raw,
-          c: [].concat(s.code || []).map(function (c) { return c.src; }).join('\n').toLowerCase() });
+          c: allCode(s).map(function (c) { return c.src; }).join('\n').toLowerCase() });
       });
     });
   }
@@ -685,7 +1138,7 @@
     return h;
   }
   function openSearch() {
-    var o = overlay('Search all notes', '<input type="search" class="search-in" placeholder="e.g. HashMap resize, @Transactional, circuit breaker, OAuth scopes\u2026" aria-label="Search">' +
+    var o = overlay('Search all notes', '<input type="search" class="search-in" placeholder="e.g. HashMap resize, LRU cache, idempotency, circuit breaker\u2026" aria-label="Search">' +
       '<div class="search-res" role="listbox"><p class="hint">Search titles, bullets, notes and code across all 24 sessions.</p></div>', 'search');
     var input = $('.search-in', o), box = $('.search-res', o), sel = 0;
     function draw() {
@@ -768,6 +1221,109 @@
         updateScore(qe2, BYKEY[k].entry.slide.quiz, {});
         break;
       }
+      case 'hint': {
+        var hb = a.closest('.hints'), lis = $$('li', hb), hid = lis.filter(function (li) { return li.hidden; });
+        if (hid.length) hid[0].hidden = false;
+        var left = hid.length - 1;
+        a.textContent = left > 0 ? '\u{1F4A1} Show hint ' + (lis.length - left + 1) + ' of ' + lis.length : '\u{1F4A1} All hints shown';
+        a.disabled = left <= 0;
+        break;
+      }
+      case 'reveal': {
+        var rc = a.nextElementSibling, open = rc.hidden, lab = $('span', a);
+        rc.hidden = !open;
+        a.setAttribute('aria-expanded', open);
+        lab.textContent = (open ? '\u25BE ' : '\u25B8 ') + lab.textContent.slice(2);
+        $('small', a).textContent = open ? 'click to hide' : 'click to reveal';
+        break;
+      }
+      case 'rate': {
+        var rb = a.closest('.rate'), rk = rb.getAttribute('data-rate'), rv = a.getAttribute('data-v');
+        if (S.rounds[rk] === rv) delete S.rounds[rk]; else S.rounds[rk] = rv;
+        save();
+        $$('button', rb).forEach(function (b) { var on = S.rounds[rk] === b.getAttribute('data-v'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+        break;
+      }
+      case 'qa-toggle': {
+        var card = a.closest('.qa-c'), ans = $('.qa-a', card);
+        ans.hidden = !ans.hidden;
+        a.setAttribute('aria-expanded', !ans.hidden);
+        a.textContent = ans.hidden ? '\u{1F441}\uFE0F Model answer' : '\u{1F648} Hide answer';
+        break;
+      }
+      case 'qa-all': {
+        var sc = a.closest('.qa-scope'), cards = $$('.qa-c', sc).filter(function (c) { return !c.hidden; });
+        var anyHidden = cards.some(function (c) { return $('.qa-a', c).hidden; });
+        cards.forEach(function (c) {
+          $('.qa-a', c).hidden = !anyHidden;
+          var tb = $('[data-act="qa-toggle"]', c);
+          if (tb) { tb.textContent = anyHidden ? '\u{1F648} Hide answer' : '\u{1F441}\uFE0F Model answer'; tb.setAttribute('aria-expanded', anyHidden); }
+        });
+        a.textContent = anyHidden ? '\u{1F648} Hide all' : '\u{1F441}\uFE0F Reveal all';
+        break;
+      }
+      case 'qa-rate': {
+        var qc = a.closest('.qa-c'), qk = qc.getAttribute('data-k'), qi2 = qc.getAttribute('data-i'), qv = +a.getAttribute('data-v');
+        var qm = S.iq[qk] = S.iq[qk] || {};
+        if (qm[qi2] === qv) delete qm[qi2]; else qm[qi2] = qv;
+        save();
+        qc.setAttribute('data-r', qm[qi2] == null ? 'u' : qm[qi2]);
+        $$('.rt', qc).forEach(function (b) { var on = qm[qi2] === +b.getAttribute('data-v'); b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+        refreshQa(a.closest('.qa-scope'));
+        break;
+      }
+      case 'flt': {
+        $$('button', a.closest('.seg')).forEach(function (b) { b.classList.toggle('on', b === a); });
+        applyFilters(a.closest('.flt-scope, .qa-scope'));
+        break;
+      }
+      case 'stage': {
+        var stg = a.closest('.stg'), body = $('.stg-b', stg);
+        body.hidden = !body.hidden;
+        stg.classList.toggle('open', !body.hidden);
+        a.textContent = body.hidden ? 'Reveal' : 'Hide';
+        a.setAttribute('aria-expanded', !body.hidden);
+        break;
+      }
+      case 'stage-all': {
+        $$('.stg', a.closest('.slide') || document).forEach(function (st) {
+          $('.stg-b', st).hidden = false;
+          st.classList.add('open');
+          var b = $('[data-act="stage"]', st);
+          if (b) { b.textContent = 'Hide'; b.setAttribute('aria-expanded', 'true'); }
+        });
+        break;
+      }
+      case 'timer': {
+        var te = a.closest('.timer'), ts = TIMERS[te.getAttribute('data-timer')];
+        if (!ts) break;
+        if (ts.end) { ts.left = Math.max(0, ts.end - Date.now()); ts.end = null; }
+        else { if (ts.left <= 0) ts.left = ts.total; ts.end = Date.now() + ts.left; te.classList.remove('up'); }
+        te.classList.toggle('run', !!ts.end);
+        a.textContent = ts.end ? '\u23F8' : '\u25B6';
+        break;
+      }
+      case 'timer-reset': {
+        var te2 = a.closest('.timer'), ts2 = TIMERS[te2.getAttribute('data-timer')];
+        if (!ts2) break;
+        ts2.end = null; ts2.left = ts2.total;
+        te2.classList.remove('run', 'up');
+        $('.tm', te2).textContent = fmtMs(ts2.left);
+        $('[data-act="timer"]', te2).textContent = '\u25B6';
+        break;
+      }
+      case 'mock-new': {
+        var fmt = (track().mocks || []).filter(function (x) { return x.id === a.getAttribute('data-fmt'); })[0];
+        if (fmt) {
+          S.mock = pickMock(fmt); save();
+          view(interviewPage('mock'), 'interview', 'Mock interview');
+          refreshQa($('.mock-run'));
+          scrollTo($('.mock-run'), { block: 'start' });
+        }
+        break;
+      }
+      case 'mock-clear': S.mock = null; save(); view(interviewPage('mock'), 'interview', 'Mock interview'); break;
+
       case 'flip': a.classList.toggle('flipped'); break;
       case 'notes': toggleNotes(); break;
       case 'prev': nav(-1); break;
@@ -795,6 +1351,20 @@
     st[+cb.getAttribute('data-i')] = cb.checked; save();
     var boxes = $$('[data-act="lab"]', lab), done = boxes.filter(function (b) { return b.checked; }).length;
     $('.lab-prog', lab).textContent = done + ' / ' + boxes.length + ' done' + (done === boxes.length ? ' \u{1F389}' : '');
+  });
+  document.addEventListener('change', function (ev) {
+    var t = ev.target;
+    if (t.matches && t.matches('select[data-f]')) applyFilters(t.closest('.flt-scope, .qa-scope'));
+  });
+  var scratchTimer = null;
+  document.addEventListener('input', function (ev) {
+    var t = ev.target;
+    if (!t.matches) return;
+    if (t.matches('textarea[data-scratch]')) {
+      S.scratch[t.getAttribute('data-scratch')] = t.value;
+      clearTimeout(scratchTimer);
+      scratchTimer = setTimeout(save, 300);
+    } else if (t.matches('.bank-q')) applyFilters(t.closest('.qa-scope'));
   });
   document.addEventListener('keydown', function (ev) {
     var tg = ev.target, tag = (tg.tagName || '').toLowerCase();
@@ -836,6 +1406,13 @@
     switch (p[0]) {
       case 'syllabus': return view(syllabus(), 'syllabus', 'Syllabus map');
       case 'projects': return view(projects(), 'projects', 'Projects');
+      case 'interview': {
+        view(interviewPage(p[1] || '', p[2]), 'interview', 'Interview prep');
+        $$('.flt-scope, .qa-scope.bank').forEach(applyFilters);
+        $$('.qa-scope').forEach(refreshQa);
+        if (p[1] === 'patterns' && p[2]) scrollTo(document.getElementById('pat-' + p[2]), { block: 'start' });
+        return;
+      }
       case 'print': return printView(+p[1]);
       case 'm': return openDeck(p[2] === 'end' ? 'm' + p[1] + ':end' : 'm' + p[1]);
       case 's': return openDeck(p[2] ? 's' + p[1] + ':' + p[2] : 's' + p[1]);
@@ -847,5 +1424,6 @@
   route();
 
   /* exposed for tests */
-  window.JBC = { decks: DECKS, route: route, search: runSearch, show: function (p) { show(p); }, state: function () { return S; } };
+  window.JBC = { decks: DECKS, route: route, search: runSearch, show: function (p) { show(p); }, state: function () { return S; },
+    rkey: rkey, pickMock: pickMock, totals: totals };
 })();

@@ -95,6 +95,84 @@ go('#/s/3/1');
 window.document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'ArrowRight' }));
 expect(window.location.hash === '#/s/3/2', 'ArrowRight did not advance (' + window.location.hash + ')');
 
+// FAANG interview track: coding / design / interview widgets and the hub
+const entries = window.JBC.decks.flatMap((d) => d.list).filter((e) => e.kind === 'slide');
+const firstOf = (t) => entries.find((e) => e.slide.type === t);
+const within = (el, sel) => [...el.querySelectorAll(sel)];
+const coding = firstOf('coding');
+expect(!!coding, 'no coding round found');
+if (coding) {
+  go(coding.href);
+  $('[data-act="hint"]').click();
+  expect(within($('.hints'), 'li').filter((li) => !li.hidden).length === 1, 'first hint not revealed');
+  const rv = $('.rv-b');
+  rv.click();
+  expect(!rv.nextElementSibling.hidden, 'reveal panel did not open');
+  $('[data-act="timer"]').click();
+  expect($('.timer').classList.contains('run'), 'interview clock did not start');
+  $('[data-act="timer-reset"]').click();
+  expect(!$('.timer').classList.contains('run'), 'interview clock did not reset');
+  $('[data-act="rate"][data-v="solo"]').click();
+  expect(window.JBC.state().rounds[window.JBC.rkey(coding)] === 'solo', 'round self-rating not saved');
+  const ta = $('textarea[data-scratch]');
+  ta.value = 'two structures: map + list';
+  ta.dispatchEvent(new window.Event('input', { bubbles: true }));
+  expect(window.JBC.state().scratch[window.JBC.rkey(coding)] === 'two structures: map + list', 'scratchpad not saved');
+}
+const iv = firstOf('interview');
+expect(!!iv, 'no interview Q&A slide found');
+if (iv) {
+  go(iv.href);
+  const card = $('.qa-c');
+  card.querySelector('[data-act="qa-toggle"]').click();
+  expect(!card.querySelector('.qa-a').hidden, 'model answer not revealed');
+  card.querySelector('.rt2').click();
+  expect(card.getAttribute('data-r') === '2', 'Q&A self-rating not applied');
+  expect(/1 nailed/.test($('.qa-sum').textContent), 'Q&A summary not updated');
+  const senior = $$('.qa-bar .seg button').find((b) => b.getAttribute('data-v') === '3');
+  senior.click();
+  expect($$('.qa-c').every((c) => c.hidden === (c.getAttribute('data-l') !== '3')), 'level filter failed');
+  $('[data-act="qa-all"]').click();
+  expect($$('.qa-c').filter((c) => !c.hidden).every((c) => !c.querySelector('.qa-a').hidden), 'reveal-all failed');
+}
+const ds = firstOf('design');
+if (ds) {
+  go(ds.href);
+  $('[data-act="stage"]').click();
+  expect(!$('.stg-b').hidden, 'design stage did not reveal');
+  $('[data-act="stage-all"]').click();
+  expect($$('.stg-b').every((b) => !b.hidden), 'reveal-all stages failed');
+}
+const lab = entries.find((e) => e.slide.stretch);
+if (lab) { go(lab.href); expect(!!$('.stretch'), 'lab stretch goals not rendered'); }
+const hard = entries.find((e) => e.slide.quiz && e.slide.quiz.some((q) => q.code));
+if (hard) { go(hard.href); expect($$('.qz .code').length > 0 && !$('.qz .code-run'), 'predict-the-output code must render without an output button'); }
+for (const h of ['#/interview', '#/interview/coding', '#/interview/design', '#/interview/bank', '#/interview/mock', '#/interview/patterns', '#/interview/behavioral']) {
+  go(h);
+  expect($('.hub-tabs a.on') && $('#main').textContent.length > 400, `interview hub page ${h} did not render`);
+}
+go('#/interview/bank');
+const bq = $('.bank-q');
+bq.value = 'treeify';
+bq.dispatchEvent(new window.Event('input', { bubbles: true }));
+const shown = $$('.bank .qa-c').filter((c) => !c.hidden).length;
+expect(shown > 0 && shown < $$('.bank .qa-c').length, `bank search did not filter (${shown} shown)`);
+go('#/interview/coding');
+const hardBtn = $$('.seg button').find((b) => b.getAttribute('data-v') === 'Hard');
+hardBtn.click();
+expect($$('tr.fi').every((r) => r.hidden === (r.getAttribute('data-d') !== 'Hard')), 'coding difficulty filter failed');
+go('#/interview/mock');
+for (const b of $$('[data-act="mock-new"]').map((x) => x.getAttribute('data-fmt'))) {
+  $(`[data-act="mock-new"][data-fmt="${b}"]`).click();
+  expect($('.mock-run') && $$('.mock-items > li').length > 0, `mock "${b}" generated nothing`);
+}
+$('[data-act="mock-clear"]').click();
+expect(!$('.mock-run') && window.JBC.state().mock === null, 'mock not cleared');
+go('#/interview/patterns/heap');
+expect(!!$('#pat-heap'), 'pattern deep link target missing');
+go('#/');
+expect(!!$('.prep-band'), 'home page is missing the interview-track band');
+
 console.log(`Rendered ${slides} content slides (+ covers), ${quizzes} quiz slides answered, ${codeBlocks} code blocks, ${diagrams} diagrams.`);
 if (errors.length) {
   console.log(errors.slice(0, 30).join('\n'));

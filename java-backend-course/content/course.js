@@ -169,10 +169,23 @@
     lab:       { label: 'Hands-on Lab', icon: '\u{1F9EA}' },
     quiz:      { label: 'Quiz',      icon: '\u2753' },
     summary:   { label: 'Summary',   icon: '\u2B50' },
-    project:   { label: 'Project',   icon: '\u{1F3D7}\uFE0F' }
+    project:   { label: 'Project',   icon: '\u{1F3D7}\uFE0F' },
+    // FAANG interview track (added by content/interview/*.js packs)
+    deep:      { label: 'Deep dive', icon: '\u{1F52C}' },
+    coding:    { label: 'Coding round', icon: '\u2328\uFE0F' },
+    design:    { label: 'Design round', icon: '\u{1F3DB}\uFE0F' },
+    interview: { label: 'Interview Q&A', icon: '\u{1F3AF}' }
   };
 
+  /* Expected seniority of an interview question / quiz item. */
+  var LEVELS = { 1: 'SDE-1', 2: 'SDE-2', 3: 'Senior' };
+
   var sessions = [];
+
+  function firstIndex(slides, type) {
+    for (var i = 0; i < slides.length; i++) if (slides[i].type === type) return i;
+    return -1;
+  }
 
   var COURSE = {
     brochure: BROCHURE,
@@ -193,6 +206,35 @@
     },
     moduleOf: function (no) {
       return MODULES.filter(function (m) { return no >= m.sessions[0] && no <= m.sessions[1]; })[0];
+    },
+    levels: LEVELS,
+    track: null,          // set by content/interview/track.js (hub: loop, patterns, mocks, behavioral)
+
+    /* Interview pack for one session (content/interview/sNN-*.js, loaded after the sessions):
+     *   deepDives: slides (type 'deep')        -> inserted just before the session's lab
+     *   stretch:   strings                     -> "level up" goals appended to the lab slide
+     *   rounds:    coding / design / interview -> inserted after the lab, before the quiz
+     *   quiz:      harder questions            -> appended to the session quiz               */
+    prep: function (no, p) {
+      var s = sessions.filter(function (x) { return x.no === no; })[0];
+      if (!s) throw new Error('Interview pack for unknown session ' + no + ' (load it after the session file)');
+      if (s.prep) throw new Error('Interview pack for session ' + no + ' registered twice');
+      s.prep = p;
+      var mark = function (sl) { sl.prep = true; return sl; };
+      var deep = (p.deepDives || []).map(function (sl) { sl.type = sl.type || 'deep'; return mark(sl); });
+      var at = firstIndex(s.slides, 'lab');
+      if (at < 0) at = firstIndex(s.slides, 'quiz');
+      s.slides.splice.apply(s.slides, [at, 0].concat(deep));
+      var lab = s.slides[firstIndex(s.slides, 'lab')];
+      if (lab && p.stretch) lab.stretch = p.stretch;
+      var qAt = firstIndex(s.slides, 'quiz');
+      s.slides.splice.apply(s.slides, [qAt < 0 ? s.slides.length : qAt, 0].concat((p.rounds || []).map(mark)));
+      var quiz = s.slides[firstIndex(s.slides, 'quiz')];
+      if (quiz && p.quiz) {
+        p.quiz.forEach(function (q) { q.prep = true; });
+        quiz.quiz = quiz.quiz.concat(p.quiz);
+      }
+      return s;
     }
   };
 

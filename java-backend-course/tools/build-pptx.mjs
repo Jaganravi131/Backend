@@ -3,6 +3,9 @@
 //   npm run build:pptx   ->   downloads/Module-<n>-<title>.pptx
 // Each content slide becomes a PPT slide (title, bullets, code, tables, diagrams,
 // labs, quizzes) with the detailed notes as speaker notes (quiz answers included).
+// Interview-track slides get their own layouts: coding rounds (problem + solution),
+// design rounds (prompt + stages + diagrams), interview Q&A (questions on the slide,
+// model answers in the notes) and predict-the-output quiz questions.
 import fs from 'node:fs';
 import path from 'node:path';
 import pptxgen from 'pptxgenjs';
@@ -10,13 +13,16 @@ import JSZip from 'jszip';
 import { ROOT, loadCourse } from './load-course.mjs';
 
 const { COURSE, MD, DG } = loadCourse();
-const OUT = path.join(ROOT, 'downloads');
+const OUT = process.env.PPTX_OUT || path.join(ROOT, 'downloads');   // PPTX_OUT=/tmp/x for a dry run
 fs.mkdirSync(OUT, { recursive: true });
 
 const W = 13.333, H = 7.5;                    // LAYOUT_WIDE
 const FONT = 'Calibri', MONO = 'Consolas';
 const INK = '1F2A24', MUTED = '5B6B60', CODE_BG = 'F3F6F4', LINE = 'D5DDD7';
-const TYPE_COLORS = { theory: '4C8DFF', practical: '22A06B', lab: 'E8892E', quiz: '9B6BF0', summary: 'C99A2E', project: 'E05A72' };
+const TYPE_COLORS = { theory: '4C8DFF', practical: '22A06B', lab: 'E8892E', quiz: '9B6BF0', summary: 'C99A2E', project: 'E05A72',
+  deep: '1A9FB0', coding: 'E5484D', design: 'B84DB3', interview: '6E9E2F' };
+const LEVELS = COURSE.levels || { 1: 'SDE-1', 2: 'SDE-2', 3: 'Senior' };
+const PATTERNS = Object.fromEntries(((COURSE.track && COURSE.track.patterns) || []).map((p) => [p.id, p.name]));
 
 const hex = (c) => c.replace('#', '').toUpperCase();
 const slug = (m) => 'Module-' + m.no + '-' + m.title.replace(/&/g, 'and').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '');
@@ -142,6 +148,9 @@ function header(slide, m, sessionNo, typeLabel, typeColor, title, lead) {
 }
 
 function contentSlide(pptx, m, s, sl) {
+  if (sl.type === 'coding') return codingSlides(pptx, m, s, sl);
+  if (sl.type === 'design') return designSlides(pptx, m, s, sl);
+  if (sl.type === 'interview') return interviewSlides(pptx, m, s, sl);
   const slide = pptx.addSlide({ masterName: 'BODY' });
   const T = COURSE.types[sl.type] || { label: sl.type };
   let y = header(slide, m, s.no, T.label, TYPE_COLORS[sl.type] || '888888', sl.title, sl.lead);
@@ -156,6 +165,7 @@ function contentSlide(pptx, m, s, sl) {
   if (sl.quiz) {
     const items = [];
     sl.quiz.forEach((q, i) => {
+      if (q.prep) return;                          // interview-level questions get their own pages
       items.push({ text: `Q${i + 1}. ${q.q}`, bullet: false, size: 13 });
       q.options.forEach((o, j) => items.push({ text: `${'ABCDEF'[j]}. ${o}`, level: 1, bullet: false, size: 11.5, color: MUTED }));
       notesExtra.push(`Q${i + 1} answer: ${'ABCDEF'[q.answer]} — ${plain(q.why)}`);
@@ -163,9 +173,11 @@ function contentSlide(pptx, m, s, sl) {
     const fs = fitSize(items.map((i) => i.text), W - 1, bottom - y, 13, 8.5);
     slide.addText(paragraphs(items.map((i) => ({ ...i, size: i.level ? fs - 1 : fs })), fs), { x: 0.5, y, w: W - 1, h: bottom - y, fontFace: FONT, valign: 'top' });
   } else if (sl.steps) {
-    const stepItems = sl.steps.map((t) => ({ text: t, numbered: true }));
+    const stepItems = sl.steps.map((t) => ({ text: t, numbered: true }))
+      .concat((sl.stretch || []).map((t) => ({ text: '**Stretch:** ' + t, bullet: true, color: MUTED })));
+    if (sl.stretch) notesExtra.push('Stretch goals:\n' + sl.stretch.map((t) => '• ' + plain(t)).join('\n'));
     const leftW = hasCode ? 6.1 : W - 1;
-    const fs = fitSize(sl.steps, leftW, bottom - y, 15, 9);
+    const fs = fitSize(stepItems.map((x) => x.text), leftW, bottom - y, 15, 8.5);
     slide.addText(paragraphs(stepItems, fs), { x: 0.5, y, w: leftW, h: bottom - y, fontFace: FONT, valign: 'top' });
     if (hasCode) codeBlock(slide, sl.code, 6.8, y, W - 7.3, bottom - y);
   } else {
@@ -205,6 +217,126 @@ function contentSlide(pptx, m, s, sl) {
   }
   if (sl.code && sl.steps == null && [].concat(sl.code)[0].out) notesExtra.push('Expected output:\n' + [].concat(sl.code)[0].out);
   slide.addNotes(notesText(sl, notesExtra));
+  if (sl.quiz && sl.quiz.some((q) => q.prep)) hardQuizSlides(pptx, m, s, sl);
+}
+
+/* ---------- interview track layouts ---------- */
+const levelTag = (l) => (l ? `[${LEVELS[l]}] ` : '');
+const blockLines = (b) => [].concat(b || []).flatMap((x) => String(x).split(/\n\s*\n/));
+
+function hardQuizSlides(pptx, m, s, sl) {
+  const items = sl.quiz.map((q, i) => ({ q, n: i + 1 })).filter((x) => x.q.prep);
+  const pages = [];
+  let textGroup = [];
+  items.forEach((it) => {
+    if (it.q.code) pages.push([it]);
+    else { textGroup.push(it); if (textGroup.length === 3) { pages.push(textGroup); textGroup = []; } }
+  });
+  if (textGroup.length) pages.push(textGroup);
+  pages.forEach((page) => {
+    const slide = pptx.addSlide({ masterName: 'BODY' });
+    const y = header(slide, m, s.no, 'Quiz', TYPE_COLORS.quiz, sl.title.replace(/^Quiz:?\s*/i, 'Interview-level quiz: '), null);
+    const bottom = H - 0.55;
+    const notes = page.map(({ q, n }) => `Q${n} answer: ${'ABCDEF'[q.answer]} — ${plain(q.why)}`);
+    if (page.length === 1 && page[0].q.code) {
+      const { q, n } = page[0];
+      const c = typeof q.code === 'string' ? { src: q.code } : q.code;
+      slide.addText(runs(`Q${n}. ${levelTag(q.level)}${q.q}`, { fontSize: 15, bold: true, color: INK }), { x: 0.5, y, w: W - 1, h: 0.45, fontFace: FONT, valign: 'top' });
+      codeBlock(slide, { lang: c.lang || 'java', file: 'Predict the output', src: c.src }, 0.5, y + 0.5, 7.6, bottom - y - 0.5);
+      const opts = q.options.map((o, j) => ({ text: `${'ABCDEF'[j]}. ${o}`, bullet: false }));
+      const fs = fitSize(opts.map((o) => o.text), W - 9.0, bottom - y - 0.6, 15, 9);
+      slide.addText(paragraphs(opts, fs), { x: 8.4, y: y + 0.5, w: W - 8.9, h: bottom - y - 0.5, fontFace: FONT, valign: 'top' });
+    } else {
+      const lines = [];
+      page.forEach(({ q, n }) => {
+        lines.push({ text: `Q${n}. ${levelTag(q.level)}${q.q}`, bullet: false, size: 14 });
+        q.options.forEach((o, j) => lines.push({ text: `${'ABCDEF'[j]}. ${o}`, level: 1, bullet: false, color: MUTED }));
+      });
+      const fs = fitSize(lines.map((l) => l.text), W - 1, bottom - y, 14, 9);
+      slide.addText(paragraphs(lines.map((l) => ({ ...l, size: l.level ? fs - 1 : fs })), fs), { x: 0.5, y, w: W - 1, h: bottom - y, fontFace: FONT, valign: 'top' });
+    }
+    slide.addNotes(notes.join('\n\n'));
+  });
+}
+
+function codingSlides(pptx, m, s, sl) {
+  const sub = `${sl.difficulty} · ${sl.minutes} min${sl.lc ? ' · same problem as LeetCode ' + sl.lc : ''} · ${(sl.pattern || []).map((p) => PATTERNS[p] || p).join(', ')}`;
+  const bottom = H - 0.55;
+  // 1) the problem
+  const a = pptx.addSlide({ masterName: 'BODY' });
+  let y = header(a, m, s.no, 'Coding round', TYPE_COLORS.coding, sl.title, sub);
+  const prob = blockLines(sl.problem).map((t) => {
+    const b = /^\s*[-•]\s+/.test(t);
+    return { text: t.replace(/^\s*[-•]\s+/, ''), bullet: b, level: 0 };
+  }).concat([{ text: '**Constraints**', bullet: false }], (sl.constraints || []).map((t) => ({ text: t, bullet: true })));
+  const fs = fitSize(prob.map((p) => p.text), 6.6, bottom - y, 15, 9);
+  a.addText(paragraphs(prob, fs), { x: 0.5, y, w: 6.6, h: bottom - y, fontFace: FONT, valign: 'top' });
+  const ex = (sl.examples || []).map((x, i) => `Example ${i + 1}\nInput:  ${x.in.replace(/\n/g, '\n        ')}\nOutput: ${x.out}` + (x.why ? `\n— ${plain(x.why)}` : '')).join('\n\n');
+  const longest = Math.max(...ex.split('\n').map((l) => l.length));
+  a.addText(ex, { x: 7.4, y, w: W - 7.9, h: bottom - y, fontFace: MONO, fontSize: Math.max(8, Math.min(12, (5.4 * 72) / (longest * 0.6))), color: '24292F',
+    fill: { color: CODE_BG }, line: { color: LINE, width: 0.75 }, valign: 'top', margin: 0.1 });
+  a.addNotes(['Hints (reveal one at a time):', ...(sl.hints || []).map((h, i) => `${i + 1}. ${plain(h)}`)].join('\n') + '\n\n' + notesText(sl));
+  // 2) the solution
+  const b = pptx.addSlide({ masterName: 'BODY' });
+  y = header(b, m, s.no, 'Coding round', TYPE_COLORS.coding, 'Solution: ' + plain(sl.title).replace(/^Coding round:\s*/i, ''), null);
+  addTable(b, { head: ['Approach', 'Time', 'Space'], rows: (sl.approaches || []).map((x) => [x.name, x.time, x.space]) }, 0.5, y, 5.3, 2.4);
+  const pit = (sl.pitfalls || []).map((t) => ({ text: t, bullet: true }));
+  const ty = y + 0.45 * ((sl.approaches || []).length + 1) + 0.25;
+  b.addText(paragraphs([{ text: '**Pitfalls**', bullet: false }].concat(pit), fitSize(pit.map((x) => x.text), 5.3, bottom - ty, 13, 8.5)),
+    { x: 0.5, y: ty, w: 5.3, h: bottom - ty, fontFace: FONT, valign: 'top' });
+  codeBlock(b, sl.code, 6.1, y, W - 6.6, bottom - y);
+  const tab = [].concat(sl.code)[0];
+  b.addNotes([
+    'Approaches:', ...(sl.approaches || []).map((x) => `• ${plain(x.name)} — ${plain(x.idea)} (${x.time} time, ${x.space} space)`),
+    '', 'Follow-ups:', ...(sl.followUps || []).map((f) => `• ${plain(f.q)}\n  ${plain([].concat(f.a).join(' '))}`),
+    '', 'Rubric:', ...(sl.rubric || []).map((r) => '• ' + plain(r)),
+    ...(tab && tab.out ? ['', 'Expected output:', tab.out] : [])
+  ].join('\n'));
+}
+
+function designSlides(pptx, m, s, sl) {
+  const bottom = H - 0.55;
+  const a = pptx.addSlide({ masterName: 'BODY' });
+  let y = header(a, m, s.no, 'Design round', TYPE_COLORS.design, sl.title, `${sl.kind === 'LLD' ? 'Low-level' : 'High-level'} design · ${sl.difficulty} · ${sl.minutes} min`);
+  a.addText([{ text: 'Interviewer: ', options: { bold: true } }].concat(runs(sl.prompt)), { x: 0.5, y, w: W - 1, h: 0.75, fontSize: 14, fontFace: FONT, color: INK,
+    fill: { color: 'F7EEF7' }, line: { color: 'D9A6D6', width: 0.75 }, margin: 0.1, valign: 'middle' });
+  y += 0.9;
+  const st = sl.stages.map((x, i) => ({ text: `**${i + 1}. ${x.t}**${x.ask ? ' — ' + x.ask : ''}`, bullet: false }));
+  a.addText(paragraphs(st, fitSize(st.map((x) => x.text), W - 1, bottom - y, 15, 9)), { x: 0.5, y, w: W - 1, h: bottom - y, fontFace: FONT, valign: 'top' });
+  a.addNotes(sl.stages.map((x, i) => `${i + 1}. ${plain(x.t)}\n` + flattenPoints(x.points).map((p) => '• ' + plain(p.text)).join('\n') +
+    (x.table ? '\n' + x.table.rows.map((r) => r.map(plain).join(' | ')).join('\n') : '')).join('\n\n') +
+    '\n\nFollow-ups:\n' + (sl.followUps || []).map((f) => `• ${plain(f.q)}\n  ${plain([].concat(f.a).join(' '))}`).join('\n') +
+    '\n\nRubric:\n' + (sl.rubric || []).map((r) => '• ' + plain(r)).join('\n') + '\n\n' + notesText(sl));
+  sl.stages.forEach((x, i) => {
+    if (!x.diagram || Array.isArray(x.diagram)) return;
+    const b = pptx.addSlide({ masterName: 'BODY' });
+    const yy = header(b, m, s.no, 'Design round', TYPE_COLORS.design, `${plain(sl.title).replace(/^Design round:\s*/i, '')} — ${i + 1}. ${plain(x.t)}`, null);
+    const pts = flattenPoints(x.points);
+    const leftW = pts.length ? 5.4 : 0;
+    if (pts.length) b.addText(paragraphs(pts, fitSize(pts.map((p) => p.text), leftW, bottom - yy, 15, 9)), { x: 0.5, y: yy, w: leftW, h: bottom - yy, fontFace: FONT, valign: 'top' });
+    const vx = pts.length ? 6.2 : 0.5, vw = W - vx - 0.5;
+    if (x.diagram.kind === 'flow') drawFlow(b, x.diagram, vx, yy + 0.1, vw, x.diagram.dir === 'v' ? bottom - yy - 0.1 : 1.1);
+    else {
+      const lines = DG.text(x.diagram);
+      b.addText(paragraphs(lines.map((l) => ({ text: l.replace(/^ +/, ''), level: Math.min(4, Math.floor((l.match(/^ */)[0].length) / 4)) })), fitSize(lines, vw, bottom - yy, 13, 8)),
+        { x: vx, y: yy, w: vw, h: bottom - yy, fontFace: FONT, valign: 'top', fill: { color: 'F7F9F8' }, line: { color: LINE, width: 0.75 }, margin: 0.12 });
+    }
+    b.addNotes(`Stage ${i + 1}: ${plain(x.t)}. ` + pts.map((p) => plain(p.text)).join(' '));
+  });
+}
+
+function interviewSlides(pptx, m, s, sl) {
+  const per = 5, pages = Math.ceil(sl.qa.length / per), bottom = H - 0.55;
+  for (let k = 0; k < pages; k++) {
+    const part = sl.qa.slice(k * per, (k + 1) * per);
+    const slide = pptx.addSlide({ masterName: 'BODY' });
+    const y = header(slide, m, s.no, 'Interview Q&A', TYPE_COLORS.interview, pages > 1 ? `${plain(sl.title)} (${k + 1}/${pages})` : sl.title, k === 0 ? sl.lead : null);
+    const items = part.map((x, j) => ({ text: `**Q${k * per + j + 1}** ${levelTag(x.level)}${x.q}`, bullet: false }));
+    slide.addText(paragraphs(items, fitSize(items.map((i) => i.text), W - 1, bottom - y, 17, 10)), { x: 0.5, y, w: W - 1, h: bottom - y, fontFace: FONT, valign: 'top', paraSpaceAfter: 8 });
+    slide.addNotes(part.map((x, j) => `Q${k * per + j + 1} (${LEVELS[x.level]}): ${plain(x.q)}\nModel answer: ${blockLines(x.a).map(plain).join(' ')}` +
+      (x.follow ? `\nFollow-ups: ${x.follow.map(plain).join(' | ')}` : '') + (x.flags ? `\nRed flags: ${x.flags.map(plain).join(' | ')}` : '')).join('\n\n') +
+      (k === pages - 1 ? '\n\n' + notesText(sl) : ''));
+  }
 }
 
 function coverSlide(pptx, m, s) {
@@ -275,5 +407,5 @@ for (const m of COURSE.modules) {
   const zipped = await (await JSZip.loadAsync(raw)).generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 9 } });
   fs.writeFileSync(file, zipped);
   const kb = Math.round(fs.statSync(file).size / 1024);
-  console.log(`\u2705 ${path.relative(ROOT, file)}  (${2 + sessions.reduce((acc, s) => acc + 1 + s.slides.length, 0)} slides, ${kb} KB)`);
+  console.log(`\u2705 ${path.relative(ROOT, file)}  (${pptx.slides.length} slides, ${kb} KB)`);
 }

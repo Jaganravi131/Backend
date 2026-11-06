@@ -7,12 +7,17 @@ import { fileURLToPath } from 'node:url';
 
 export const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
+function block(html, name) {
+  const start = html.indexOf(`@${name}:start`);
+  const end = html.indexOf(`@${name}:end`);
+  if (start < 0 || end < 0) throw new Error(`index.html is missing the @${name}:start/@${name}:end markers`);
+  return [...html.slice(start, end).matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);
+}
+
+/** Content scripts in load order: the 24 sessions, then the interview track (hub data + packs). */
 export function sessionFiles() {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-  const start = html.indexOf('@sessions:start');
-  const end = html.indexOf('@sessions:end');
-  if (start < 0 || end < 0) throw new Error('index.html is missing the @sessions:start/@sessions:end markers');
-  return [...html.slice(start, end).matchAll(/<script src="([^"]+)"/g)].map((m) => m[1]);
+  return [...block(html, 'sessions'), ...block(html, 'prep')];
 }
 
 export function loadCourse({ partial = false } = {}) {

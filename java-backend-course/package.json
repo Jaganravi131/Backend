@@ -2,14 +2,15 @@
   "name": "java-backend-course",
   "version": "1.0.0",
   "private": true,
-  "description": "Interactive slide decks + detailed notes for the 24-session Java Backend Development syllabus (static site, no build step).",
+  "description": "Interactive slide decks + detailed notes for the 24-session Java Backend Development syllabus, with a FAANG-level interview track (static site, no build step).",
   "type": "module",
   "scripts": {
     "validate": "node tools/validate.mjs",
     "test:render": "node tools/render-test.mjs",
     "verify:java": "node tools/verify-java.mjs",
+    "verify:sql": "node --no-warnings tools/verify-sql.mjs",
     "build:pptx": "node tools/build-pptx.mjs",
-    "check": "npm run validate && npm run test:render",
+    "check": "npm run validate && npm run test:render && npm run verify:sql",
     "serve": "python3 -m http.server 8000 --bind 0.0.0.0"
   },
   "devDependencies": {
