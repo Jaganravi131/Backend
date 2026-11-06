@@ -297,7 +297,7 @@
   function followHTML(list) {
     return '<div class="fups"><div class="fups-h">\u{1F501} Follow-up questions the interviewer will ask</div>' + list.map(function (x) {
       return PRINT ? '<div class="fu open"><p class="fu-q">' + inl(x.q) + '</p><div class="fu-a">' + MD.blocks(x.a) + '</div></div>' :
-        '<details class="fu"><summary>' + inl(x.q) + '</summary><div class="fu-a">' + MD.blocks(x.a) + '</div></details>';
+        '<details class="fu"><summary><span>' + inl(x.q) + '</span></summary><div class="fu-a">' + MD.blocks(x.a) + '</div></details>';
     }).join('') + '</div>';
   }
   function rubricHTML(list) {
