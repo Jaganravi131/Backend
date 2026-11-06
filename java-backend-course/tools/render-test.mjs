@@ -87,7 +87,8 @@ input.dispatchEvent(new window.Event('input'));
 expect($$('.sr').length > 0, 'search returned no results for "circuit breaker"');
 window.document.dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape' }));
 expect(!$('.ovl'), 'Escape did not close the overlay');
-go('#/s/1/12');
+// first lab slide of session 1 (its position shifts when interview-track slides are inserted)
+go(window.JBC.decks[0].list.find((e) => e.kind === 'slide' && e.session.no === 1 && e.slide.type === 'lab').href);
 const box = $('[data-act="lab"]');
 if (box) { box.click(); box.dispatchEvent(new window.Event('change', { bubbles: true })); }
 expect(/1 \/ \d+ done/.test($('.lab-prog').textContent), 'lab checkbox progress not updated');
